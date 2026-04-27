@@ -15,16 +15,18 @@
 </head>
 <body>
 
-<div id="login" class="login">
-  <div class="login-card">
+<div id="login" class="login login-premium">
+  <div class="login-bg login-bg-left"></div>
+  <div class="login-bg login-bg-right"></div>
+  <div class="login-card login-card-premium">
     <div class="logo-login">
       <img src="logo_inno_life.webp" alt="Logo InnoLife">
     </div>
     <h1>InnoCarrer</h1>
     <p>Gestão Interna por Setor</p>
-    <input id="usuarioLogin" placeholder="Usuário">
-    <input id="senha" type="password" placeholder="Senha">
-    <button onclick="login()">Entrar</button>
+    <div class="input-premium-wrap"><span class="input-icon">👤</span><input id="usuarioLogin" placeholder="Usuário" autocomplete="off"></div>
+    <div class="input-premium-wrap"><span class="input-icon">🔒</span><input id="senha" type="password" placeholder="Senha" autocomplete="current-password"></div>
+    <button id="btnLogin" class="btn-login-premium" onclick="login()">Entrar</button><div id="loginLoader" class="login-loader hidden"><span></span><small>Entrando...</small></div>
   </div>
 </div>
 

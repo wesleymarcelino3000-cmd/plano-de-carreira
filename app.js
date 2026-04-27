@@ -1,4 +1,31 @@
 
+function iniciarAnimacaoLogin(){
+  const card=document.querySelector('.login-card-premium');
+  const btn=document.getElementById('btnLogin');
+  const loader=document.getElementById('loginLoader');
+
+  if(card) card.classList.add('login-entering');
+  if(btn){
+    btn.disabled=true;
+    btn.innerText='Aguarde...';
+  }
+  if(loader) loader.classList.remove('hidden');
+}
+
+function pararAnimacaoLogin(){
+  const card=document.querySelector('.login-card-premium');
+  const btn=document.getElementById('btnLogin');
+  const loader=document.getElementById('loginLoader');
+
+  if(card) card.classList.remove('login-entering');
+  if(btn){
+    btn.disabled=false;
+    btn.innerText='Entrar';
+  }
+  if(loader) loader.classList.add('hidden');
+}
+
+
 async function gerarHashSenha(senha){
   const encoder = new TextEncoder();
   const data = encoder.encode(String(senha || ''));
