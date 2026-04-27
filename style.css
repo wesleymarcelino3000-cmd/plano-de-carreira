@@ -65,34 +65,28 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 .login-card{
   text-align: center;
 }
-
 .login-card h1{
   font-size: 38px;
   margin-bottom: 10px;
   letter-spacing: 1px;
 }
-
 .logo-login img{
   width: 170px;
   filter: drop-shadow(0 0 15px #22c55e55);
   transition: 0.3s;
 }
-
 .logo-login img:hover{
   transform: scale(1.05);
   filter: drop-shadow(0 0 25px #22c55e);
 }
-
 .login-card input{
   text-align: center;
 }
-
 .login-card button{
   width: 100%;
   font-size: 16px;
   box-shadow: 0 0 20px #22c55e33;
 }
-
 .login-card button:hover{
   box-shadow: 0 0 30px #22c55e;
 }
