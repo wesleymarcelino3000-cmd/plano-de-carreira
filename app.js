@@ -179,6 +179,7 @@ async function dashboard(){
   const percIndividual=totalMetasIndividuais ? Math.round((realizadoIndividual/totalMetasIndividuais)*100) : 0;
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="grid">
       <div class="card"><h3>Funcionários</h3><div class="value">${funcs?.length||0}</div></div>
       <div class="card"><h3>Pontos</h3><div class="value">${totalPontos}</div></div>
@@ -228,6 +229,7 @@ async function painelSetor(setor){
   const realizadoIndividual=(metasIndividuais||[]).reduce((s,m)=>s+(Number(m.realizado)||0),0);
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="grid">
       <div class="card"><h3>Equipe</h3><div class="value">${funcs?.length||0}</div></div>
       <div class="card"><h3>Meta</h3><div class="value">${meta}</div></div>
@@ -292,6 +294,7 @@ async function metas(){
   const {data}=await db.from('metas').select('*').order('created_at',{ascending:false});
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card">
       <h3>Criar Meta</h3>
       <select id="metaSetor">
@@ -337,6 +340,7 @@ async function metasIndividuais(){
   ]);
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card form-card">
       <h3>Criar meta individual</h3>
       <p class="muted">Escolha o setor, selecione o funcionário e defina a meta individual.</p>
@@ -383,7 +387,7 @@ function carregarFuncionariosMetaIndividual(){
 
   const funcionarios=(window.funcionariosMetaIndividual||[]).filter(f=>!setor || f.setor===setor);
   select.innerHTML = funcionarios.length
-    ? funcionarios.map(f=>`<option value="${f.id||''}" data-nome="${f.nome||''}">${f.nome||''}</option>`).join('')
+    ? funcionarios.map(f=>`<option  data-nome="${f.nome||''}">${f.nome||''}</option>`).join('')
     : '<option value="">Nenhum funcionário neste setor</option>';
 }
 
@@ -460,6 +464,7 @@ async function criarUsuario(){
   document.getElementById('title').innerText='Criar Usuário';
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card form-card">
       <h3>Novo usuário</h3>
       <p class="muted">Crie o usuário com login próprio, sem depender de e-mail do Supabase.</p>
@@ -587,13 +592,14 @@ async function editarAcessosUsuario(id){
   if(error || !u){ alert('Erro ao buscar usuário.'); return; }
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card form-card">
       <h3>Editar acessos - ${u.nome || '-'}</h3>
       <div class="form-grid">
         <input id="editNomeAcesso" placeholder="Nome">
-        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> value="${u.nome || ''}">
-        <input id="editUsuarioAcesso" placeholder="Usuário de login" value="${u.usuario || ''}">
-        <input id="editEmailAcesso" placeholder="Email" value="${u.email || ''}">
+        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> >
+        <input id="editUsuarioAcesso" placeholder="Usuário de login" >
+        <input id="editEmailAcesso" placeholder="Email" >
         <select id="editNivelAcesso" onchange="marcarPermissoesPadrao('editPerm')">
           <option value="funcionario" ${u.nivel==='funcionario'?'selected':''}>Funcionário</option>
           <option value="admin" ${u.nivel==='admin'?'selected':''}>Admin</option>
@@ -631,12 +637,13 @@ async function salvarAcessosUsuario(id){
 function editarMeuUsuario(){
   document.getElementById('title').innerText='Editar Meu Usuário';
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card form-card">
       <h3>Meus dados</h3>
       <p class="muted">Altere seus dados. Para manter a senha atual, deixe o campo de nova senha em branco.</p>
       <div class="form-grid">
-        <input id="editNome" placeholder="Nome" value="${usuarioAtual.nome || ''}">
-        <input id="editUsuario" placeholder="Usuário de login" value="${usuarioAtual.usuario || ''}">
+        <input id="editNome" placeholder="Nome" >
+        <input id="editUsuario" placeholder="Usuário de login" >
         <select id="editSetor">
           ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===usuarioAtual.setor?'selected':''}>${s}</option>`).join('')}
         </select>
@@ -700,6 +707,7 @@ async function planoCarreira(){
   const podeEditarPlano = isAdmin();
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     ${podeEditarPlano ? `
     <div class="card import-card no-export">
       <h3>Importar Plano de Carreira</h3>
@@ -1003,6 +1011,7 @@ async function paginaFuncionariosAdmin(){
   document.getElementById('title').innerText='Editar Funcionários';
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card">
       <h3>Editar funcionários</h3>
       <p class="muted">Edite ou exclua funcionários cadastrados.</p>
@@ -1054,14 +1063,15 @@ async function editarFuncionarioAdmin(id){
   document.getElementById('title').innerText='Editar Funcionário';
 
   document.getElementById('page').innerHTML=`
+    <!-- campos iniciam limpos -->
     <div class="card form-card edit-func-card">
       <h3>Editar funcionário</h3>
       <div class="form-grid">
-        <input id="funcEditNome" placeholder="Nome do funcionário" value="${f.nome || ''}">
+        <input id="funcEditNome" placeholder="Nome do funcionário" >
         <select id="funcEditSetor">
           ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
         </select>
-        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
+        <input id="funcEditPontos" type="number" placeholder="Pontos" >
       </div>
 
       <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
