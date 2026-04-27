@@ -82,3 +82,56 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 .toast-sistema.show{opacity:1;transform:translateY(0)}
 .toast-sistema.erro{border-color:#ef4444;background:#2a1111;color:#fff}
 @media(max-width:900px){.ajuste-pontos-box{min-width:0}.quick-points,.manual-points{align-items:flex-start}.manual-points{flex-wrap:wrap}}
+
+/* LOGIN ULTRA PREMIUM */
+.login{
+  background: radial-gradient(circle at top,#22c55e22,transparent 40%), #020617;
+}
+
+.login-card{
+  width:360px;
+  background:linear-gradient(145deg,#020617,#0b1a13);
+  border-radius:25px;
+  padding:40px 30px;
+  border:1px solid #22c55e55;
+  box-shadow:0 0 60px #22c55e22;
+  text-align:center;
+}
+
+.logo-login img{
+  width:160px;
+  filter:drop-shadow(0 0 20px #22c55e);
+  margin-bottom:10px;
+}
+
+.login-card h1{
+  font-size:38px;
+  margin-bottom:20px;
+  color:#eaffef;
+  text-shadow:0 0 10px #22c55e55;
+}
+
+.login-card input{
+  text-align:left;
+  padding-left:45px;
+  position:relative;
+  border:1px solid #22c55e44;
+  box-shadow:inset 0 0 10px #000;
+}
+
+.login-card input::placeholder{
+  color:#a5b7aa;
+}
+
+.login-card button{
+  width:100%;
+  font-size:18px;
+  margin-top:15px;
+  background:linear-gradient(90deg,#22c55e,#4ade80);
+  box-shadow:0 0 30px #22c55e;
+}
+
+.login-card button:hover{
+  transform:scale(1.03);
+  box-shadow:0 0 50px #22c55e;
+}
