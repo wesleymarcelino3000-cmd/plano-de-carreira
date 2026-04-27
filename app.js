@@ -179,7 +179,7 @@ async function dashboard(){
   const percIndividual=totalMetasIndividuais ? Math.round((realizadoIndividual/totalMetasIndividuais)*100) : 0;
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="grid">
       <div class="card"><h3>Funcionários</h3><div class="value">${funcs?.length||0}</div></div>
       <div class="card"><h3>Pontos</h3><div class="value">${totalPontos}</div></div>
@@ -192,7 +192,16 @@ async function dashboard(){
       <div class="card"><h3>Ranking por Pontos</h3><canvas id="chartRanking"></canvas></div>
       <div class="card"><h3>Metas por Setor</h3><canvas id="chartMetas"></canvas></div>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 
   const c1 = new Chart(document.getElementById('chartRanking'),{
     type:'bar',
@@ -229,7 +238,7 @@ async function painelSetor(setor){
   const realizadoIndividual=(metasIndividuais||[]).reduce((s,m)=>s+(Number(m.realizado)||0),0);
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="grid">
       <div class="card"><h3>Equipe</h3><div class="value">${funcs?.length||0}</div></div>
       <div class="card"><h3>Meta</h3><div class="value">${meta}</div></div>
@@ -252,7 +261,16 @@ async function painelSetor(setor){
         }).join('')}
       </table>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 
   document.getElementById('listaSetor').innerHTML=(funcs||[]).map((f,i)=>`
     <div class="card">#${i+1} ${f.nome} <span class="badge">${f.pontos||0} pts</span></div>
@@ -294,7 +312,7 @@ async function metas(){
   const {data}=await db.from('metas').select('*').order('created_at',{ascending:false});
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card">
       <h3>Criar Meta</h3>
       <select id="metaSetor">
@@ -312,7 +330,16 @@ async function metas(){
         ${(data||[]).map(m=>`<tr><td>${m.setor}</td><td>${m.meta}</td><td>${m.realizado}</td><td>R$ ${m.bonus||0}</td></tr>`).join('')}
       </table>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 }
 
 async function salvarMeta(){
@@ -340,7 +367,7 @@ async function metasIndividuais(){
   ]);
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card form-card">
       <h3>Criar meta individual</h3>
       <p class="muted">Escolha o setor, selecione o funcionário e defina a meta individual.</p>
@@ -374,7 +401,16 @@ async function metasIndividuais(){
         }).join('')}
       </table>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 
   window.funcionariosMetaIndividual = funcs || [];
   carregarFuncionariosMetaIndividual();
@@ -387,7 +423,7 @@ function carregarFuncionariosMetaIndividual(){
 
   const funcionarios=(window.funcionariosMetaIndividual||[]).filter(f=>!setor || f.setor===setor);
   select.innerHTML = funcionarios.length
-    ? funcionarios.map(f=>`<option  data-nome="${f.nome||''}">${f.nome||''}</option>`).join('')
+    ? funcionarios.map(f=>`<option value="${f.id||''}" data-nome="${f.nome||''}">${f.nome||''}</option>`).join('')
     : '<option value="">Nenhum funcionário neste setor</option>';
 }
 
@@ -464,15 +500,15 @@ async function criarUsuario(){
   document.getElementById('title').innerText='Criar Usuário';
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card form-card">
       <h3>Novo usuário</h3>
       <p class="muted">Crie o usuário com login próprio, sem depender de e-mail do Supabase.</p>
       <div class="form-grid">
-        <input id="novoNome" placeholder="Nome do usuário">
-        <input id="novoUsuario" placeholder="Usuário de login. Ex: joao.silva">
+        <input id="novoNome" placeholder="Nome do usuário" autocomplete="off">
+        <input id="novoUsuario" placeholder="Usuário de login. Ex: joao.silva" autocomplete="off">
         <input id="novoEmail" type="email" placeholder="Email opcional (não obrigatório)">
-        <input id="novaSenha" type="password" placeholder="Senha inicial">
+        <input id="novaSenha" type="password" placeholder="Senha inicial" autocomplete="new-password">
         <input id="fotoFuncionario" type="file" accept="image/*">
         <select id="novoNivel" onchange="marcarPermissoesPadrao('novoPerm')">
           <option value="funcionario">Funcionário</option>
@@ -490,7 +526,16 @@ async function criarUsuario(){
       ${montarCheckboxPermissoes('novoPerm', permissoesPadrao('funcionario'))}
       <button onclick="salvarNovoUsuario()">Criar usuário</button>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 }
 
 
@@ -592,14 +637,14 @@ async function editarAcessosUsuario(id){
   if(error || !u){ alert('Erro ao buscar usuário.'); return; }
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card form-card">
       <h3>Editar acessos - ${u.nome || '-'}</h3>
       <div class="form-grid">
         <input id="editNomeAcesso" placeholder="Nome">
-        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> >
-        <input id="editUsuarioAcesso" placeholder="Usuário de login" >
-        <input id="editEmailAcesso" placeholder="Email" >
+        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> value="${u.nome || ''}">
+        <input id="editUsuarioAcesso" placeholder="Usuário de login" value="${u.usuario || ''}">
+        <input id="editEmailAcesso" placeholder="Email" value="${u.email || ''}">
         <select id="editNivelAcesso" onchange="marcarPermissoesPadrao('editPerm')">
           <option value="funcionario" ${u.nivel==='funcionario'?'selected':''}>Funcionário</option>
           <option value="admin" ${u.nivel==='admin'?'selected':''}>Admin</option>
@@ -613,7 +658,16 @@ async function editarAcessosUsuario(id){
       <button onclick="salvarAcessosUsuario('${u.id}')">Salvar acessos</button>
       <button class="secondary-btn" onclick="criarUsuario()">Voltar</button>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 }
 
 async function salvarAcessosUsuario(id){
@@ -637,13 +691,13 @@ async function salvarAcessosUsuario(id){
 function editarMeuUsuario(){
   document.getElementById('title').innerText='Editar Meu Usuário';
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card form-card">
       <h3>Meus dados</h3>
       <p class="muted">Altere seus dados. Para manter a senha atual, deixe o campo de nova senha em branco.</p>
       <div class="form-grid">
-        <input id="editNome" placeholder="Nome" >
-        <input id="editUsuario" placeholder="Usuário de login" >
+        <input id="editNome" placeholder="Nome" value="${usuarioAtual.nome || ''}">
+        <input id="editUsuario" placeholder="Usuário de login" value="${usuarioAtual.usuario || ''}">
         <select id="editSetor">
           ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===usuarioAtual.setor?'selected':''}>${s}</option>`).join('')}
         </select>
@@ -652,7 +706,16 @@ function editarMeuUsuario(){
       </div>
       <button onclick="salvarMeuUsuario()">Salvar alterações</button>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 }
 
 async function salvarMeuUsuario(){
@@ -707,7 +770,7 @@ async function planoCarreira(){
   const podeEditarPlano = isAdmin();
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     ${podeEditarPlano ? `
     <div class="card import-card no-export">
       <h3>Importar Plano de Carreira</h3>
@@ -787,7 +850,16 @@ async function planoCarreira(){
         </table>
       </div>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 }
 
 function carregarArquivosPlanoImportado(){
@@ -1011,13 +1083,22 @@ async function paginaFuncionariosAdmin(){
   document.getElementById('title').innerText='Editar Funcionários';
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card">
       <h3>Editar funcionários</h3>
       <p class="muted">Edite ou exclua funcionários cadastrados.</p>
       <div id="listaFuncionariosAdmin" class="usuarios-acesso"></div>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 
   carregarFuncionariosAdmin();
 }
@@ -1063,21 +1144,30 @@ async function editarFuncionarioAdmin(id){
   document.getElementById('title').innerText='Editar Funcionário';
 
   document.getElementById('page').innerHTML=`
-    <!-- campos iniciam limpos -->
+    <form autocomplete="off">
     <div class="card form-card edit-func-card">
       <h3>Editar funcionário</h3>
       <div class="form-grid">
-        <input id="funcEditNome" placeholder="Nome do funcionário" >
+        <input id="funcEditNome" placeholder="Nome do funcionário" value="${f.nome || ''}">
         <select id="funcEditSetor">
           ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
         </select>
-        <input id="funcEditPontos" type="number" placeholder="Pontos" >
+        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
       </div>
 
       <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
       <button class="secondary-btn" onclick="paginaFuncionariosAdmin()">Voltar</button>
     </div>
+  </form>
   `;
+  setTimeout(()=>{
+    const a=document.getElementById('novoNome');
+    const b=document.getElementById('novoUsuario');
+    const c=document.getElementById('novaSenha');
+    if(a) a.value='';
+    if(b) b.value='';
+    if(c) c.value='';
+  },100);
 }
 
 async function salvarFuncionarioAdmin(id){
