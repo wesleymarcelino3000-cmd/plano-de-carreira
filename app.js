@@ -513,11 +513,7 @@ async function salvarNovoUsuario(){
     fotoUrl = await converterImagemBase64('fotoFuncionario');
   }
 
-  const {data,error}=await db.auth.signUp({email:emailLogin,password});
-  if(error){
-    alert('Erro ao criar login: ' + error.message);
-    return;
-  }
+  
 
   const userId=data?.user?.id;
   if(!userId){

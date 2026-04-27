@@ -1,0 +1,3 @@
+Esta versão NÃO usa Supabase Auth para criar usuário.
+Rode supabase_login_sem_auth_definitivo.sql antes de publicar.
+Usuários antigos sem senha entram com senha 123456.
