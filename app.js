@@ -660,15 +660,15 @@ async function planoCarreira(){
 
   ultimoPlanoCarreira = funcs || [];
 
-  const niveisManuais = carregarNiveisPlanoManual();
-  const arquivosImportados = carregarArquivosPlanoImportado();
+  const niveisManuais = await carregarNiveisPlanoManual();
+  const arquivosImportados = await carregarArquivosPlanoImportado();
   const podeEditarPlano = isAdmin();
 
   document.getElementById('page').innerHTML=`
     ${podeEditarPlano ? `
     <div class="card import-card no-export">
       <h3>Importar Plano de Carreira</h3>
-      <p class="muted">Importe imagem, PDF, Word, Excel, CSV ou TXT do plano de carreira.</p>
+      <p class="muted">Agora o plano fica salvo no Supabase e aparece para todos os usuários.</p>
       <div class="form-grid">
         <input id="arquivoPlanoCarreira" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*,application/pdf">
         <input id="nomeArquivoPlano" placeholder="Nome para identificar o plano. Ex: Plano 2026">
@@ -678,7 +678,7 @@ async function planoCarreira(){
 
     <div class="card form-card no-export">
       <h3>Adicionar manualmente pelo Admin</h3>
-      <p class="muted">Cadastre níveis, cargos ou etapas do plano sem remover o modelo atual.</p>
+      <p class="muted">Cadastre níveis, cargos ou etapas do plano. Tudo fica salvo no banco.</p>
       <div class="form-grid">
         <input id="manualNivelPlano" placeholder="Nível / Cargo. Ex: Supervisor SAC">
         <input id="manualPontosPlano" type="number" placeholder="Pontos necessários">
@@ -764,67 +764,147 @@ async function planoCarreira(){
 }
 
 
-function carregarArquivosPlanoImportado(){
-  try{return JSON.parse(localStorage.getItem('planosCarreiraImportados') || '[]');}
-  catch(e){return [];}
+
+async function carregarArquivosPlanoImportado(){
+  const {data,error}=await db
+    .from('planos_carreira')
+    .select('*')
+    .order('created_at',{ascending:false});
+
+  if(error){
+    console.error(error);
+    mostrarToast('Erro ao carregar planos do banco','erro');
+    return [];
+  }
+
+  return data || [];
 }
-function salvarArquivosPlanoImportado(lista){localStorage.setItem('planosCarreiraImportados', JSON.stringify(lista));}
+
 function montarArquivoPlanoHTML(a,podeExcluir=false){
   const isImagem=(a.tipo||'').startsWith('image/');
   const isPdf=(a.tipo||'').includes('pdf');
+  const nomeExibicao=a.nome_exibicao || a.nome || 'Plano importado';
+  const conteudo=a.conteudo || '#';
+
   return `<div class="arquivo-plano-card">
-    <div><strong>${a.nomeExibicao || a.nome || 'Plano importado'}</strong><br><span class="muted">${a.nome || ''} • ${a.data || ''}</span></div>
-    ${isImagem ? `<img src="${a.conteudo}" class="preview-plano" alt="Plano importado">` : ''}
-    ${isPdf ? `<a class="link-plano" href="${a.conteudo}" target="_blank">Abrir PDF</a>` : `<a class="link-plano" href="${a.conteudo}" download="${a.nome || 'plano'}">Baixar arquivo</a>`}
+    <div><strong>${nomeExibicao}</strong><br><span class="muted">${a.nome || ''} • ${a.created_at ? new Date(a.created_at).toLocaleString('pt-BR') : ''}</span></div>
+    ${isImagem ? `<img src="${conteudo}" class="preview-plano" alt="Plano importado">` : ''}
+    ${isPdf ? `<a class="link-plano" href="${conteudo}" target="_blank">Abrir PDF</a>` : `<a class="link-plano" href="${conteudo}" download="${a.nome || 'plano'}">Baixar arquivo</a>`}
     ${podeExcluir ? `<button class="small-btn danger-btn" onclick="excluirPlanoImportado('${a.id}')">Excluir</button>` : ''}
   </div>`;
 }
+
 function importarPlanoCarreira(){
   if(!isAdmin()){ alert('Somente admin pode importar o plano de carreira.'); return; }
+
   const input=document.getElementById('arquivoPlanoCarreira');
   const arquivo=input?.files?.[0];
-  if(!arquivo){ alert('Selecione um arquivo para importar.'); return; }
+
+  if(!arquivo){
+    alert('Selecione um arquivo para importar.');
+    return;
+  }
+
   const reader=new FileReader();
-  reader.onload=function(e){
-    const lista=carregarArquivosPlanoImportado();
+
+  reader.onload=async function(e){
     const nomeExibicao=(document.getElementById('nomeArquivoPlano')?.value || '').trim() || arquivo.name;
-    lista.unshift({id:Date.now().toString(),nome:arquivo.name,nomeExibicao,tipo:arquivo.type || 'arquivo',data:new Date().toLocaleString('pt-BR'),conteudo:e.target.result});
-    salvarArquivosPlanoImportado(lista);
-    alert('Plano de carreira importado com sucesso!');
+
+    const {error}=await db.from('planos_carreira').insert([{
+      nome:arquivo.name,
+      nome_exibicao:nomeExibicao,
+      tipo:arquivo.type || 'arquivo',
+      conteudo:e.target.result,
+      criado_por:usuarioAtual?.nome || usuarioAtual?.email || usuarioAtual?.usuario || null
+    }]);
+
+    if(error){
+      alert('Erro ao salvar plano no banco: ' + error.message);
+      return;
+    }
+
+    mostrarToast('Plano salvo no Supabase!');
     planoCarreira();
   };
+
   reader.readAsDataURL(arquivo);
 }
-function excluirPlanoImportado(id){
+
+async function excluirPlanoImportado(id){
   if(!isAdmin()){ alert('Somente admin pode excluir planos importados.'); return; }
   if(!confirm('Deseja excluir este plano importado?')) return;
-  salvarArquivosPlanoImportado(carregarArquivosPlanoImportado().filter(a=>a.id!==id));
+
+  const {error}=await db.from('planos_carreira').delete().eq('id',id);
+
+  if(error){
+    alert('Erro ao excluir plano: ' + error.message);
+    return;
+  }
+
+  mostrarToast('Plano importado excluído.');
   planoCarreira();
 }
-function carregarNiveisPlanoManual(){
-  try{return JSON.parse(localStorage.getItem('niveisPlanoCarreiraManual') || '[]');}
-  catch(e){return [];}
+
+async function carregarNiveisPlanoManual(){
+  const {data,error}=await db
+    .from('niveis_carreira')
+    .select('*')
+    .order('pontos',{ascending:true});
+
+  if(error){
+    console.error(error);
+    mostrarToast('Erro ao carregar níveis do banco','erro');
+    return [];
+  }
+
+  return data || [];
 }
-function salvarNiveisPlanoManual(lista){localStorage.setItem('niveisPlanoCarreiraManual', JSON.stringify(lista));}
-function salvarNivelPlanoManual(){
+
+async function salvarNivelPlanoManual(){
   if(!isAdmin()){ alert('Somente admin pode adicionar manualmente ao plano.'); return; }
+
   const nivel=(document.getElementById('manualNivelPlano')?.value || '').trim();
   const pontos=Number(document.getElementById('manualPontosPlano')?.value || 0);
   const descricao=(document.getElementById('manualDescricaoPlano')?.value || '').trim();
   const setor=document.getElementById('manualSetorPlano')?.value || 'Geral';
-  if(!nivel){ alert('Informe o nível ou cargo do plano.'); return; }
-  const lista=carregarNiveisPlanoManual();
-  lista.push({id:Date.now().toString(),nivel,pontos,descricao,setor});
-  salvarNiveisPlanoManual(lista);
-  alert('Item adicionado ao plano de carreira!');
+
+  if(!nivel){
+    alert('Informe o nível ou cargo do plano.');
+    return;
+  }
+
+  const {error}=await db.from('niveis_carreira').insert([{
+    nivel,
+    pontos,
+    descricao,
+    setor,
+    criado_por:usuarioAtual?.nome || usuarioAtual?.email || usuarioAtual?.usuario || null
+  }]);
+
+  if(error){
+    alert('Erro ao salvar nível no banco: ' + error.message);
+    return;
+  }
+
+  mostrarToast('Item salvo no Supabase!');
   planoCarreira();
 }
-function excluirNivelPlanoManual(id){
+
+async function excluirNivelPlanoManual(id){
   if(!isAdmin()){ alert('Somente admin pode excluir itens manuais.'); return; }
   if(!confirm('Deseja excluir este item manual do plano?')) return;
-  salvarNiveisPlanoManual(carregarNiveisPlanoManual().filter(n=>n.id!==id));
+
+  const {error}=await db.from('niveis_carreira').delete().eq('id',id);
+
+  if(error){
+    alert('Erro ao excluir item: ' + error.message);
+    return;
+  }
+
+  mostrarToast('Item removido do plano.');
   planoCarreira();
 }
+
 function mostrarToast(msg, tipo='ok'){
   let toast=document.getElementById('toastSistema');
   if(!toast){
@@ -871,6 +951,14 @@ async function ajustarPontos(id, pontosAtuais, valorRapido=null){
     alert('Erro ao atualizar pontos: ' + error.message);
     return;
   }
+
+  await db.from('historico_pontos').insert([{
+    funcionario_id:id,
+    pontos_antes:Number(pontosAtuais || 0),
+    pontos_depois:novosPontos,
+    ajuste:valor,
+    alterado_por:usuarioAtual?.nome || usuarioAtual?.email || usuarioAtual?.usuario || null
+  }]);
 
   if(input) input.value='';
   animarLinhaFuncionario(id);
