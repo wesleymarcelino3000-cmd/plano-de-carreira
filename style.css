@@ -84,11 +84,10 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 @media(max-width:900px){.ajuste-pontos-box{min-width:0}.quick-points,.manual-points{align-items:flex-start}.manual-points{flex-wrap:wrap}}
 
 
-/* LOGIN PREMIUM */
-.login-card{text-align:center}
-.login-card h1{font-size:38px;margin-bottom:10px;letter-spacing:1px}
-.logo-login img{width:170px;filter:drop-shadow(0 0 15px #22c55e55);transition:.3s}
-.logo-login img:hover{transform:scale(1.05);filter:drop-shadow(0 0 25px #22c55e)}
-.login-card input{text-align:center}
-.login-card button{width:100%;font-size:16px;box-shadow:0 0 20px #22c55e33}
-.login-card button:hover{box-shadow:0 0 30px #22c55e}
+/* ADMIN - EDITAR FUNCIONÁRIOS */
+.edit-func-card{
+  border-color:#22c55e55;
+}
+.edit-func-card h3{
+  color:#7CFF4F;
+}

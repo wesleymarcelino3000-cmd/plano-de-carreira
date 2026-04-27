@@ -465,6 +465,16 @@ function marcarPermissoesPadrao(prefixo){
   });
 }
 
+
+function escaparHTML(valor){
+  return String(valor ?? '')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+
 async function criarUsuario(){
   if(!isAdmin()){
     alert('Somente admin pode criar usuários.');
@@ -502,8 +512,15 @@ async function criarUsuario(){
       <p class="muted">Selecione um usuário para liberar ou bloquear funções do menu.</p>
       <div id="listaUsuariosAcesso" class="usuarios-acesso"></div>
     </div>
+
+    <div class="card">
+      <h3>Editar funcionários</h3>
+      <p class="muted">Altere nome, setor e pontos dos funcionários cadastrados.</p>
+      <div id="listaFuncionariosAdmin" class="usuarios-acesso"></div>
+    </div>
   `;
   carregarUsuariosAcesso();
+  carregarFuncionariosAdmin();
 }
 
 async function salvarNovoUsuario(){
@@ -616,6 +633,92 @@ async function salvarAcessosUsuario(id){
   criarUsuario();
 }
 
+
+async function carregarFuncionariosAdmin(){
+  const box=document.getElementById('listaFuncionariosAdmin');
+  if(!box) return;
+
+  const {data,error}=await db.from('funcionarios').select('*').order('nome',{ascending:true});
+
+  if(error){
+    box.innerHTML=`<p class="muted">Erro ao carregar funcionários: ${error.message}</p>`;
+    return;
+  }
+
+  box.innerHTML=(data||[]).map(f=>`
+    <div class="user-access-card">
+      <div>
+        <strong>${escaparHTML(f.nome || '-')}</strong><br>
+        <span class="muted">Setor: ${escaparHTML(f.setor || '-')} • Pontos: ${f.pontos || 0}</span>
+      </div>
+      <button class="small-btn" onclick="editarFuncionarioAdmin('${f.id}')">Editar funcionário</button>
+    </div>
+  `).join('') || '<p class="muted">Nenhum funcionário encontrado.</p>';
+}
+
+async function editarFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode editar funcionários.');
+    return;
+  }
+
+  const {data:f,error}=await db.from('funcionarios').select('*').eq('id',id).maybeSingle();
+
+  if(error || !f){
+    alert('Erro ao buscar funcionário.');
+    return;
+  }
+
+  document.getElementById('title').innerText='Editar Funcionário';
+
+  document.getElementById('page').innerHTML=`
+    <div class="card form-card edit-func-card">
+      <h3>Editar funcionário</h3>
+      <p class="muted">Atualize os dados do funcionário sem alterar as permissões do usuário.</p>
+
+      <div class="form-grid">
+        <input id="funcEditNome" placeholder="Nome do funcionário" value="${escaparHTML(f.nome || '')}">
+        <select id="funcEditSetor">
+          ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
+      </div>
+
+      <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
+      <button class="secondary-btn" onclick="criarUsuario()">Voltar</button>
+    </div>
+  `;
+}
+
+async function salvarFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode editar funcionários.');
+    return;
+  }
+
+  const nome=document.getElementById('funcEditNome').value.trim();
+  const setor=document.getElementById('funcEditSetor').value;
+  const pontos=Number(document.getElementById('funcEditPontos').value || 0);
+
+  if(!nome){
+    alert('Informe o nome do funcionário.');
+    return;
+  }
+
+  const {error}=await db
+    .from('funcionarios')
+    .update({nome,setor,pontos})
+    .eq('id',id);
+
+  if(error){
+    alert('Erro ao salvar funcionário: ' + error.message);
+    return;
+  }
+
+  alert('Funcionário atualizado!');
+  criarUsuario();
+}
+
 function editarMeuUsuario(){
   document.getElementById('title').innerText='Editar Meu Usuário';
   document.getElementById('page').innerHTML=`
@@ -649,26 +752,19 @@ async function salvarMeuUsuario(){
   alert('Usuário atualizado!');
 }
 
-
 async function planoCarreira(){
   document.getElementById('title').innerText='Plano de Carreira';
-
-  const {data:funcs}=await db
-    .from('funcionarios')
-    .select('*')
-    .order('pontos',{ascending:false});
-
+  const {data:funcs}=await db.from('funcionarios').select('*').order('pontos',{ascending:false});
   ultimoPlanoCarreira = funcs || [];
-
-  const niveisManuais = await carregarNiveisPlanoManual();
-  const arquivosImportados = await carregarArquivosPlanoImportado();
+  const niveisManuais = carregarNiveisPlanoManual();
+  const arquivosImportados = carregarArquivosPlanoImportado();
   const podeEditarPlano = isAdmin();
 
   document.getElementById('page').innerHTML=`
     ${podeEditarPlano ? `
     <div class="card import-card no-export">
       <h3>Importar Plano de Carreira</h3>
-      <p class="muted">Agora o plano fica salvo no Supabase e aparece para todos os usuários.</p>
+      <p class="muted">Importe imagem, PDF, Word, Excel, CSV ou TXT do plano de carreira.</p>
       <div class="form-grid">
         <input id="arquivoPlanoCarreira" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*,application/pdf">
         <input id="nomeArquivoPlano" placeholder="Nome para identificar o plano. Ex: Plano 2026">
@@ -678,7 +774,7 @@ async function planoCarreira(){
 
     <div class="card form-card no-export">
       <h3>Adicionar manualmente pelo Admin</h3>
-      <p class="muted">Cadastre níveis, cargos ou etapas do plano. Tudo fica salvo no banco.</p>
+      <p class="muted">Cadastre níveis, cargos ou etapas do plano sem remover o modelo atual.</p>
       <div class="form-grid">
         <input id="manualNivelPlano" placeholder="Nível / Cargo. Ex: Supervisor SAC">
         <input id="manualPontosPlano" type="number" placeholder="Pontos necessários">
@@ -688,7 +784,11 @@ async function planoCarreira(){
         </select>
       </div>
       <button onclick="salvarNivelPlanoManual()">Adicionar ao plano</button>
-    </div>` : ''}
+    </div>` : `
+    <div class="card no-export">
+      <h3>Plano de Carreira</h3>
+      <p class="muted">Você pode visualizar o plano de carreira. A importação e inclusão manual são liberadas apenas para Admin.</p>
+    </div>`}
 
     <div class="card">
       <h3>Planos importados</h3>
@@ -697,214 +797,113 @@ async function planoCarreira(){
       </div>
     </div>
 
-    ${niveisManuais.length ? `
-    <div class="card">
-      <h3>Itens adicionados manualmente</h3>
-      <table class="table">
-        <tr><th>Nível / Cargo</th><th>Setor</th><th>Pontos</th><th>Descrição</th>${podeEditarPlano ? '<th class="no-export">Ação</th>' : ''}</tr>
-        ${niveisManuais.map(n=>`
-          <tr>
-            <td>${n.nivel}</td>
-            <td>${n.setor || 'Geral'}</td>
-            <td>${n.pontos || 0}+</td>
-            <td>${n.descricao || '-'}</td>
-            ${podeEditarPlano ? `<td class="no-export"><button class="small-btn danger-btn" onclick="excluirNivelPlanoManual('${n.id}')">Excluir</button></td>` : ''}
-          </tr>
-        `).join('')}
-      </table>
-    </div>` : ''}
-
     <div id="planoExportArea">
       <div class="grid carreira-grid">
         <div class="card"><h3>Iniciante</h3><div class="value">0+</div><p class="muted">Começo da jornada.</p></div>
         <div class="card"><h3>Bronze</h3><div class="value">100+</div><p class="muted">Primeira evolução.</p></div>
         <div class="card"><h3>Prata</h3><div class="value">300+</div><p class="muted">Bom desempenho.</p></div>
         <div class="card"><h3>Ouro</h3><div class="value">600+</div><p class="muted">Alto desempenho.</p></div>
+        ${niveisManuais.map(n=>`
+          <div class="card manual-plano-card">
+            <h3>${n.nivel}</h3>
+            <div class="value">${n.pontos || 0}+</div>
+            <p class="muted">${n.setor || 'Geral'} • ${n.descricao || 'Sem descrição'}</p>
+            ${podeEditarPlano ? `<button class="small-btn danger-btn no-export" onclick="excluirNivelPlanoManual('${n.id}')">Excluir</button>` : ''}
+          </div>`).join('')}
       </div>
-
       <div class="card">
         <h3>Funcionários por evolução</h3>
         <table class="table">
-          <tr>
-            <th>Nome</th>
-            <th>Setor</th>
-            <th>Pontos</th>
-            <th>Nível de carreira</th>
-            ${isAdmin() ? '<th class="no-export">Ajustar pontos</th>' : ''}
-          </tr>
-
-          ${(funcs||[]).map(f=>`
-            <tr id="linha_func_${f.id}">
-              <td>${f.nome}</td>
-              <td>${f.setor||'-'}</td>
-              <td><strong class="pontos-valor">${f.pontos||0}</strong></td>
-              <td>${nivelCarreira(f.pontos||0)}</td>
-              ${isAdmin() ? `<td class="no-export">
-                <div class="ajuste-pontos-box">
-                  <div class="quick-points">
-                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 10)">+10</button>
-                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 50)">+50</button>
-                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 100)">+100</button>
-                    <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -10)">-10</button>
-                    <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -50)">-50</button>
-                    <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -100)">-100</button>
-                  </div>
-                  <div class="manual-points">
-                    <input type="number" id="pontos_${f.id}" placeholder="+ ou -">
-                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0})">Salvar</button>
-                  </div>
+          <tr><th>Nome</th><th>Setor</th><th>Pontos</th><th>Nível de carreira</th>${isAdmin() ? '<th class="no-export">Ajustar pontos</th>' : ''}</tr>
+          ${(funcs||[]).map(f=>`<tr id="linha_func_${f.id}">
+            <td>${f.nome}</td>
+            <td>${f.setor||'-'}</td>
+            <td><strong class="pontos-valor">${f.pontos||0}</strong></td>
+            <td>${nivelCarreira(f.pontos||0)}</td>
+            ${isAdmin() ? `<td class="no-export">
+              <div class="ajuste-pontos-box">
+                <div class="quick-points">
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 10)">+10</button>
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 50)">+50</button>
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 100)">+100</button>
+                  <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -10)">-10</button>
+                  <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -50)">-50</button>
+                  <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -100)">-100</button>
                 </div>
-              </td>` : ''}
-            </tr>
-          `).join('')}
+                <div class="manual-points">
+                  <input type="number" id="pontos_${f.id}" placeholder="+ ou -">
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0})">Salvar</button>
+                </div>
+              </div>
+            </td>` : ''}
+          </tr>`).join('')}
         </table>
       </div>
     </div>
   `;
 }
 
-
-
-async function carregarArquivosPlanoImportado(){
-  const {data,error}=await db
-    .from('planos_carreira')
-    .select('*')
-    .order('created_at',{ascending:false});
-
-  if(error){
-    console.error(error);
-    mostrarToast('Erro ao carregar planos do banco','erro');
-    return [];
-  }
-
-  return data || [];
+function carregarArquivosPlanoImportado(){
+  try{return JSON.parse(localStorage.getItem('planosCarreiraImportados') || '[]');}
+  catch(e){return [];}
 }
-
+function salvarArquivosPlanoImportado(lista){localStorage.setItem('planosCarreiraImportados', JSON.stringify(lista));}
 function montarArquivoPlanoHTML(a,podeExcluir=false){
   const isImagem=(a.tipo||'').startsWith('image/');
   const isPdf=(a.tipo||'').includes('pdf');
-  const nomeExibicao=a.nome_exibicao || a.nome || 'Plano importado';
-  const conteudo=a.conteudo || '#';
-
   return `<div class="arquivo-plano-card">
-    <div><strong>${nomeExibicao}</strong><br><span class="muted">${a.nome || ''} • ${a.created_at ? new Date(a.created_at).toLocaleString('pt-BR') : ''}</span></div>
-    ${isImagem ? `<img src="${conteudo}" class="preview-plano" alt="Plano importado">` : ''}
-    ${isPdf ? `<a class="link-plano" href="${conteudo}" target="_blank">Abrir PDF</a>` : `<a class="link-plano" href="${conteudo}" download="${a.nome || 'plano'}">Baixar arquivo</a>`}
+    <div><strong>${a.nomeExibicao || a.nome || 'Plano importado'}</strong><br><span class="muted">${a.nome || ''} • ${a.data || ''}</span></div>
+    ${isImagem ? `<img src="${a.conteudo}" class="preview-plano" alt="Plano importado">` : ''}
+    ${isPdf ? `<a class="link-plano" href="${a.conteudo}" target="_blank">Abrir PDF</a>` : `<a class="link-plano" href="${a.conteudo}" download="${a.nome || 'plano'}">Baixar arquivo</a>`}
     ${podeExcluir ? `<button class="small-btn danger-btn" onclick="excluirPlanoImportado('${a.id}')">Excluir</button>` : ''}
   </div>`;
 }
-
 function importarPlanoCarreira(){
   if(!isAdmin()){ alert('Somente admin pode importar o plano de carreira.'); return; }
-
   const input=document.getElementById('arquivoPlanoCarreira');
   const arquivo=input?.files?.[0];
-
-  if(!arquivo){
-    alert('Selecione um arquivo para importar.');
-    return;
-  }
-
+  if(!arquivo){ alert('Selecione um arquivo para importar.'); return; }
   const reader=new FileReader();
-
-  reader.onload=async function(e){
+  reader.onload=function(e){
+    const lista=carregarArquivosPlanoImportado();
     const nomeExibicao=(document.getElementById('nomeArquivoPlano')?.value || '').trim() || arquivo.name;
-
-    const {error}=await db.from('planos_carreira').insert([{
-      nome:arquivo.name,
-      nome_exibicao:nomeExibicao,
-      tipo:arquivo.type || 'arquivo',
-      conteudo:e.target.result,
-      criado_por:usuarioAtual?.nome || usuarioAtual?.email || usuarioAtual?.usuario || null
-    }]);
-
-    if(error){
-      alert('Erro ao salvar plano no banco: ' + error.message);
-      return;
-    }
-
-    mostrarToast('Plano salvo no Supabase!');
+    lista.unshift({id:Date.now().toString(),nome:arquivo.name,nomeExibicao,tipo:arquivo.type || 'arquivo',data:new Date().toLocaleString('pt-BR'),conteudo:e.target.result});
+    salvarArquivosPlanoImportado(lista);
+    alert('Plano de carreira importado com sucesso!');
     planoCarreira();
   };
-
   reader.readAsDataURL(arquivo);
 }
-
-async function excluirPlanoImportado(id){
+function excluirPlanoImportado(id){
   if(!isAdmin()){ alert('Somente admin pode excluir planos importados.'); return; }
   if(!confirm('Deseja excluir este plano importado?')) return;
-
-  const {error}=await db.from('planos_carreira').delete().eq('id',id);
-
-  if(error){
-    alert('Erro ao excluir plano: ' + error.message);
-    return;
-  }
-
-  mostrarToast('Plano importado excluído.');
+  salvarArquivosPlanoImportado(carregarArquivosPlanoImportado().filter(a=>a.id!==id));
   planoCarreira();
 }
-
-async function carregarNiveisPlanoManual(){
-  const {data,error}=await db
-    .from('niveis_carreira')
-    .select('*')
-    .order('pontos',{ascending:true});
-
-  if(error){
-    console.error(error);
-    mostrarToast('Erro ao carregar níveis do banco','erro');
-    return [];
-  }
-
-  return data || [];
+function carregarNiveisPlanoManual(){
+  try{return JSON.parse(localStorage.getItem('niveisPlanoCarreiraManual') || '[]');}
+  catch(e){return [];}
 }
-
-async function salvarNivelPlanoManual(){
+function salvarNiveisPlanoManual(lista){localStorage.setItem('niveisPlanoCarreiraManual', JSON.stringify(lista));}
+function salvarNivelPlanoManual(){
   if(!isAdmin()){ alert('Somente admin pode adicionar manualmente ao plano.'); return; }
-
   const nivel=(document.getElementById('manualNivelPlano')?.value || '').trim();
   const pontos=Number(document.getElementById('manualPontosPlano')?.value || 0);
   const descricao=(document.getElementById('manualDescricaoPlano')?.value || '').trim();
   const setor=document.getElementById('manualSetorPlano')?.value || 'Geral';
-
-  if(!nivel){
-    alert('Informe o nível ou cargo do plano.');
-    return;
-  }
-
-  const {error}=await db.from('niveis_carreira').insert([{
-    nivel,
-    pontos,
-    descricao,
-    setor,
-    criado_por:usuarioAtual?.nome || usuarioAtual?.email || usuarioAtual?.usuario || null
-  }]);
-
-  if(error){
-    alert('Erro ao salvar nível no banco: ' + error.message);
-    return;
-  }
-
-  mostrarToast('Item salvo no Supabase!');
+  if(!nivel){ alert('Informe o nível ou cargo do plano.'); return; }
+  const lista=carregarNiveisPlanoManual();
+  lista.push({id:Date.now().toString(),nivel,pontos,descricao,setor});
+  salvarNiveisPlanoManual(lista);
+  alert('Item adicionado ao plano de carreira!');
   planoCarreira();
 }
-
-async function excluirNivelPlanoManual(id){
+function excluirNivelPlanoManual(id){
   if(!isAdmin()){ alert('Somente admin pode excluir itens manuais.'); return; }
   if(!confirm('Deseja excluir este item manual do plano?')) return;
-
-  const {error}=await db.from('niveis_carreira').delete().eq('id',id);
-
-  if(error){
-    alert('Erro ao excluir item: ' + error.message);
-    return;
-  }
-
-  mostrarToast('Item removido do plano.');
+  salvarNiveisPlanoManual(carregarNiveisPlanoManual().filter(n=>n.id!==id));
   planoCarreira();
 }
-
 function mostrarToast(msg, tipo='ok'){
   let toast=document.getElementById('toastSistema');
   if(!toast){
@@ -951,14 +950,6 @@ async function ajustarPontos(id, pontosAtuais, valorRapido=null){
     alert('Erro ao atualizar pontos: ' + error.message);
     return;
   }
-
-  await db.from('historico_pontos').insert([{
-    funcionario_id:id,
-    pontos_antes:Number(pontosAtuais || 0),
-    pontos_depois:novosPontos,
-    ajuste:valor,
-    alterado_por:usuarioAtual?.nome || usuarioAtual?.email || usuarioAtual?.usuario || null
-  }]);
 
   if(input) input.value='';
   animarLinhaFuncionario(id);
