@@ -1,3 +1,17 @@
+
+async function gerarHashSenha(senha){
+  const encoder = new TextEncoder();
+  const data = encoder.encode(String(senha || ''));
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function gerarIdLocal(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'id_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+}
+
 let usuarioAtual = null;
 let charts = [];
 let ultimoPlanoCarreira = [];
@@ -42,8 +56,9 @@ function limparGraficos(){
   charts = [];
 }
 
+
 async function login(){
-  const loginDigitado=(document.getElementById('usuarioLogin')?.value || document.getElementById('email')?.value || '').trim();
+  const loginDigitado=(document.getElementById('usuarioLogin')?.value || document.getElementById('email')?.value || '').trim().toLowerCase();
   const senha=document.getElementById('senha').value;
 
   if(!loginDigitado || !senha){
@@ -51,64 +66,28 @@ async function login(){
     return;
   }
 
-  let emailLogin = loginDigitado;
-  let usuarioPorLogin = null;
-
-  if(!loginDigitado.includes('@')){
-    const {data:usuarioBusca,error:erroBusca}=await db
-      .from('usuarios')
-      .select('*')
-      .eq('usuario',loginDigitado)
-      .maybeSingle();
-
-    if(erroBusca){
-      alert("Erro ao buscar usuário. Execute o SQL de atualização para criar a coluna 'usuario'. Detalhe: " + erroBusca.message);
-      return;
-    }
-    if(!usuarioBusca || !usuarioBusca.email){
-      alert('Usuário não encontrado.');
-      return;
-    }
-    usuarioPorLogin = usuarioBusca;
-    emailLogin = usuarioBusca.email;
-  }
-
-  const {data,error}=await db.auth.signInWithPassword({email:emailLogin,password:senha});
-  if(error){ alert('Erro no login: ' + error.message); return; }
-
-  const user=data.user;
-
-  let {data:usuario, error:erroUsuario}=await db
+  const {data:usuario,error}=await db
     .from('usuarios')
     .select('*')
-    .eq('id',user.id)
+    .eq('usuario',loginDigitado)
     .maybeSingle();
 
-  if(erroUsuario){
-    alert('Erro ao buscar usuário: ' + erroUsuario.message);
+  if(error){
+    alert('Erro ao buscar usuário: ' + error.message + '. Verifique se rodou o SQL do login sem email.');
     return;
   }
 
-  if(!usuario && usuarioPorLogin){
-    usuario = usuarioPorLogin;
+  if(!usuario){
+    alert('Usuário não encontrado.');
+    return;
   }
 
-  if(!usuario){
-    const {data:admins}=await db.from('usuarios').select('*').ilike('nivel','admin');
-    const nivel = admins && admins.length === 0 ? 'admin' : 'funcionario';
+  const senhaHash = await gerarHashSenha(senha);
+  const senhaBanco = usuario.senha_hash || usuario.senha || '';
 
-    const novoUsuario = {
-      id:user.id,
-      nome:emailLogin,
-      email:emailLogin,
-      usuario:emailLogin.split('@')[0],
-      nivel:nivel,
-      setor:'Geral',
-      permissoes:permissoesPadrao(nivel)
-    };
-
-    await db.from('usuarios').insert([novoUsuario]);
-    usuario = novoUsuario;
+  if(senhaBanco !== senhaHash && senhaBanco !== senha){
+    alert('Senha incorreta.');
+    return;
   }
 
   if(!usuario.permissoes){
@@ -125,6 +104,7 @@ async function login(){
   iniciarRealtimeFuncionarios();
   nav(usuarioPode('dashboard') ? 'dashboard' : primeiroMenuPermitido());
 }
+
 
 function primeiroMenuPermitido(){
   const menu = MENUS_SISTEMA.find(m=>usuarioPode(m.key));
@@ -145,10 +125,12 @@ function aplicarPermissoes(){
   });
 }
 
+
 async function logout(){
-  await db.auth.signOut();
+  usuarioAtual = null;
   location.reload();
 }
+
 
 function nav(p){
   paginaAtual = p;
@@ -479,11 +461,11 @@ async function criarUsuario(){
   document.getElementById('page').innerHTML=`
     <div class="card form-card">
       <h3>Novo usuário</h3>
-      <p class="muted">Crie o usuário e vincule ao funcionário. O e-mail não é obrigatório.</p>
+      <p class="muted">Crie o usuário com login próprio, sem depender de e-mail do Supabase.</p>
       <div class="form-grid">
         <input id="novoNome" placeholder="Nome do usuário">
         <input id="novoUsuario" placeholder="Usuário de login. Ex: joao.silva">
-        <input id="novoEmail" type="email" placeholder="Email opcional">
+        <input id="novoEmail" type="email" placeholder="Email opcional (não obrigatório)">
         <input id="novaSenha" type="password" placeholder="Senha inicial">
         <input id="fotoFuncionario" type="file" accept="image/*">
         <select id="novoNivel" onchange="marcarPermissoesPadrao('novoPerm')">
