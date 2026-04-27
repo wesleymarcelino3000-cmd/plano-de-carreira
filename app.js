@@ -611,19 +611,21 @@ async function salvarAcessosUsuario(id){
   criarUsuario();
 }
 
+
 function editarMeuUsuario(){
   document.getElementById('title').innerText='Editar Meu Usuário';
   document.getElementById('page').innerHTML=`
     <div class="card form-card">
       <h3>Meus dados</h3>
+      <p class="muted">Altere seus dados. Para manter a senha atual, deixe o campo de nova senha em branco.</p>
       <div class="form-grid">
-        <input id="editNome" placeholder="Nome">
-        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> value="${usuarioAtual.nome || ''}">
+        <input id="editNome" placeholder="Nome" value="${usuarioAtual.nome || ''}">
         <input id="editUsuario" placeholder="Usuário de login" value="${usuarioAtual.usuario || ''}">
         <select id="editSetor">
           ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===usuarioAtual.setor?'selected':''}>${s}</option>`).join('')}
         </select>
         <input disabled value="Nível: ${usuarioAtual.nivel || ''}">
+        <input id="editNovaSenha" type="password" placeholder="Nova senha (opcional)">
       </div>
       <button onclick="salvarMeuUsuario()">Salvar alterações</button>
     </div>
@@ -631,24 +633,25 @@ function editarMeuUsuario(){
 }
 
 async function salvarMeuUsuario(){
-  const nome=document.getElementById('meuNome').value.trim();
-  const senha=document.getElementById('novaSenhaUsuario')?.value;
+  const nome=document.getElementById('editNome').value.trim();
+  const usuario=document.getElementById('editUsuario').value.trim().toLowerCase();
+  const setor=document.getElementById('editSetor').value;
+  const novaSenha=(document.getElementById('editNovaSenha')?.value || '').trim();
 
-  if(!nome){
-    alert('Informe o nome.');
+  if(!nome || !usuario){
+    alert('Informe seu nome e usuário.');
     return;
   }
 
-  let updateData={nome};
+  const dadosAtualizacao={nome,usuario,setor};
 
-  if(senha){
-    const senha_hash = await gerarHashSenha(senha);
-    updateData.senha_hash = senha_hash;
+  if(novaSenha){
+    dadosAtualizacao.senha_hash = await gerarHashSenha(novaSenha);
   }
 
   const {error}=await db
     .from('usuarios')
-    .update(updateData)
+    .update(dadosAtualizacao)
     .eq('id',usuarioAtual.id);
 
   if(error){
@@ -656,10 +659,21 @@ async function salvarMeuUsuario(){
     return;
   }
 
-  alert('Dados atualizados!');
-  usuarioAtual.nome = nome;
+  usuarioAtual={...usuarioAtual,nome,usuario,setor};
+  if(novaSenha){
+    usuarioAtual.senha_hash = dadosAtualizacao.senha_hash;
+  }
+
+  atualizarUserInfo();
+  aplicarPermissoes();
+  if(novaSenha){
+    alert('Senha alterada com sucesso!');
+  }else{
+    alert('Dados atualizados!');
+  }
   editarMeuUsuario();
 }
+
 
 async function planoCarreira(){
   document.getElementById('title').innerText='Plano de Carreira';
