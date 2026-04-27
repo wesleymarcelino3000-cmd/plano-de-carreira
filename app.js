@@ -169,6 +169,7 @@ function nav(p){
   if(p==='criarUsuario') return criarUsuario();
   if(p==='editarMeuUsuario') return editarMeuUsuario();
   if(p==='planoCarreira') return planoCarreira();
+  if(p==='funcionariosAdmin') return paginaFuncionariosAdmin();
 }
 
 async function dashboard(){
@@ -943,25 +944,4 @@ function exportarPlanoCSV(){
   const linhas=[['Nome','Setor','Pontos','Nível de carreira'],...ultimoPlanoCarreira.map(f=>[f.nome || '', f.setor || '-', f.pontos || 0, nivelCarreira(f.pontos || 0)])];
   const csv=linhas.map(l=>l.map(v=>`"${String(v).replaceAll('"','""')}"`).join(';')).join('\n');
   baixarArquivo(new Blob([csv],{type:'text/csv;charset=utf-8'}),'plano-de-carreira.csv');
-}
-
-async function excluirFuncionarioAdmin(id){
-  if(!isAdmin()){
-    alert('Somente admin pode excluir funcionários.');
-    return;
-  }
-
-  if(!confirm('Tem certeza que deseja excluir este funcionário?')){
-    return;
-  }
-
-  const {error}=await db.from('funcionarios').delete().eq('id',id);
-
-  if(error){
-    alert('Erro ao excluir funcionário: ' + error.message);
-    return;
-  }
-
-  alert('Funcionário excluído com sucesso!');
-  carregarFuncionariosAdmin();
 }
