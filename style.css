@@ -82,12 +82,3 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 .toast-sistema.show{opacity:1;transform:translateY(0)}
 .toast-sistema.erro{border-color:#ef4444;background:#2a1111;color:#fff}
 @media(max-width:900px){.ajuste-pontos-box{min-width:0}.quick-points,.manual-points{align-items:flex-start}.manual-points{flex-wrap:wrap}}
-
-
-/* ADMIN - EDITAR FUNCIONÁRIOS */
-.edit-func-card{
-  border-color:#22c55e55;
-}
-.edit-func-card h3{
-  color:#7CFF4F;
-}

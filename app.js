@@ -465,16 +465,6 @@ function marcarPermissoesPadrao(prefixo){
   });
 }
 
-
-function escaparHTML(valor){
-  return String(valor ?? '')
-    .replaceAll('&','&amp;')
-    .replaceAll('<','&lt;')
-    .replaceAll('>','&gt;')
-    .replaceAll('"','&quot;')
-    .replaceAll("'","&#039;");
-}
-
 async function criarUsuario(){
   if(!isAdmin()){
     alert('Somente admin pode criar usuários.');
@@ -512,15 +502,8 @@ async function criarUsuario(){
       <p class="muted">Selecione um usuário para liberar ou bloquear funções do menu.</p>
       <div id="listaUsuariosAcesso" class="usuarios-acesso"></div>
     </div>
-
-    <div class="card">
-      <h3>Editar funcionários</h3>
-      <p class="muted">Altere nome, setor e pontos dos funcionários cadastrados.</p>
-      <div id="listaFuncionariosAdmin" class="usuarios-acesso"></div>
-    </div>
   `;
   carregarUsuariosAcesso();
-  carregarFuncionariosAdmin();
 }
 
 async function salvarNovoUsuario(){
@@ -630,92 +613,6 @@ async function salvarAcessosUsuario(id){
   if(error){ alert('Erro ao salvar acessos: ' + error.message); return; }
 
   alert('Acessos atualizados!');
-  criarUsuario();
-}
-
-
-async function carregarFuncionariosAdmin(){
-  const box=document.getElementById('listaFuncionariosAdmin');
-  if(!box) return;
-
-  const {data,error}=await db.from('funcionarios').select('*').order('nome',{ascending:true});
-
-  if(error){
-    box.innerHTML=`<p class="muted">Erro ao carregar funcionários: ${error.message}</p>`;
-    return;
-  }
-
-  box.innerHTML=(data||[]).map(f=>`
-    <div class="user-access-card">
-      <div>
-        <strong>${escaparHTML(f.nome || '-')}</strong><br>
-        <span class="muted">Setor: ${escaparHTML(f.setor || '-')} • Pontos: ${f.pontos || 0}</span>
-      </div>
-      <button class="small-btn" onclick="editarFuncionarioAdmin('${f.id}')">Editar funcionário</button>
-    </div>
-  `).join('') || '<p class="muted">Nenhum funcionário encontrado.</p>';
-}
-
-async function editarFuncionarioAdmin(id){
-  if(!isAdmin()){
-    alert('Somente admin pode editar funcionários.');
-    return;
-  }
-
-  const {data:f,error}=await db.from('funcionarios').select('*').eq('id',id).maybeSingle();
-
-  if(error || !f){
-    alert('Erro ao buscar funcionário.');
-    return;
-  }
-
-  document.getElementById('title').innerText='Editar Funcionário';
-
-  document.getElementById('page').innerHTML=`
-    <div class="card form-card edit-func-card">
-      <h3>Editar funcionário</h3>
-      <p class="muted">Atualize os dados do funcionário sem alterar as permissões do usuário.</p>
-
-      <div class="form-grid">
-        <input id="funcEditNome" placeholder="Nome do funcionário" value="${escaparHTML(f.nome || '')}">
-        <select id="funcEditSetor">
-          ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
-        </select>
-        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
-      </div>
-
-      <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
-      <button class="secondary-btn" onclick="criarUsuario()">Voltar</button>
-    </div>
-  `;
-}
-
-async function salvarFuncionarioAdmin(id){
-  if(!isAdmin()){
-    alert('Somente admin pode editar funcionários.');
-    return;
-  }
-
-  const nome=document.getElementById('funcEditNome').value.trim();
-  const setor=document.getElementById('funcEditSetor').value;
-  const pontos=Number(document.getElementById('funcEditPontos').value || 0);
-
-  if(!nome){
-    alert('Informe o nome do funcionário.');
-    return;
-  }
-
-  const {error}=await db
-    .from('funcionarios')
-    .update({nome,setor,pontos})
-    .eq('id',id);
-
-  if(error){
-    alert('Erro ao salvar funcionário: ' + error.message);
-    return;
-  }
-
-  alert('Funcionário atualizado!');
   criarUsuario();
 }
 
