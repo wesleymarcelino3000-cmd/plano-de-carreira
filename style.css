@@ -60,25 +60,39 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 @media(max-width:900px){.permissoes-box{grid-template-columns:1fr}.user-access-card{align-items:flex-start;flex-direction:column}}
 @media print{.sidebar,.export-card,.no-export{display:none!important}.content{margin-left:0;width:100%;padding:0}body{background:#fff;color:#111}.card{color:#111;background:#fff;border:1px solid #ccc}.value{color:#111}.muted{color:#555}.badge{color:#111;background:#eee}}
 
-/* PLANO DE CARREIRA - IMPORTAÇÃO E CADASTRO MANUAL */
-.import-card button{margin:5px 5px 5px 0}
-.lista-arquivos-plano{display:grid;gap:12px}
-.arquivo-plano-card{display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:12px;background:#0b1512;border:1px solid #26362f;border-radius:14px;padding:12px}
-.preview-plano{width:120px;max-height:80px;object-fit:contain;border-radius:10px;background:#fff;padding:4px}
-.link-plano{color:#7CFF4F;text-decoration:none;font-weight:800;background:#22c55e22;padding:8px 10px;border-radius:8px;white-space:nowrap}
-.manual-plano-card{border-color:#22c55e66}
-@media(max-width:900px){.arquivo-plano-card{grid-template-columns:1fr}.preview-plano{width:100%;max-height:180px}.link-plano{display:inline-block;text-align:center}}
 
+/* LOGIN PREMIUM */
+.login-card{
+  text-align: center;
+}
 
-/* AJUSTE DE PONTOS - ADMIN */
-.ajuste-pontos-box{display:grid;gap:8px;min-width:260px}
-.quick-points{display:flex;gap:6px;flex-wrap:wrap}
-.manual-points{display:flex;gap:8px;align-items:center}
-.manual-points input{width:95px;margin:0;padding:9px}
-.pontos-valor{font-size:18px;color:#7CFF4F}
-.linha-atualizada{animation:pontosAtualizados .8s ease}
-@keyframes pontosAtualizados{0%{background:#22c55e55;transform:scale(1.01)}100%{background:transparent;transform:scale(1)}}
-.toast-sistema{position:fixed;right:22px;bottom:22px;z-index:9999;background:#10231b;color:#eaffef;border:1px solid #22c55e88;border-radius:14px;padding:14px 18px;box-shadow:0 18px 40px #0008;opacity:0;transform:translateY(14px);pointer-events:none;transition:.25s;font-weight:800}
-.toast-sistema.show{opacity:1;transform:translateY(0)}
-.toast-sistema.erro{border-color:#ef4444;background:#2a1111;color:#fff}
-@media(max-width:900px){.ajuste-pontos-box{min-width:0}.quick-points,.manual-points{align-items:flex-start}.manual-points{flex-wrap:wrap}}
+.login-card h1{
+  font-size: 38px;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+.logo-login img{
+  width: 170px;
+  filter: drop-shadow(0 0 15px #22c55e55);
+  transition: 0.3s;
+}
+
+.logo-login img:hover{
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 25px #22c55e);
+}
+
+.login-card input{
+  text-align: center;
+}
+
+.login-card button{
+  width: 100%;
+  font-size: 16px;
+  box-shadow: 0 0 20px #22c55e33;
+}
+
+.login-card button:hover{
+  box-shadow: 0 0 30px #22c55e;
+}
