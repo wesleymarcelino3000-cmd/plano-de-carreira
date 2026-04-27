@@ -660,32 +660,66 @@ async function planoCarreira(){
 
   ultimoPlanoCarreira = funcs || [];
 
+  const niveisManuais = carregarNiveisPlanoManual();
+  const arquivosImportados = carregarArquivosPlanoImportado();
+  const podeEditarPlano = isAdmin();
+
   document.getElementById('page').innerHTML=`
+    ${podeEditarPlano ? `
+    <div class="card import-card no-export">
+      <h3>Importar Plano de Carreira</h3>
+      <p class="muted">Importe imagem, PDF, Word, Excel, CSV ou TXT do plano de carreira.</p>
+      <div class="form-grid">
+        <input id="arquivoPlanoCarreira" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*,application/pdf">
+        <input id="nomeArquivoPlano" placeholder="Nome para identificar o plano. Ex: Plano 2026">
+      </div>
+      <button onclick="importarPlanoCarreira()">Importar plano</button>
+    </div>
+
+    <div class="card form-card no-export">
+      <h3>Adicionar manualmente pelo Admin</h3>
+      <p class="muted">Cadastre níveis, cargos ou etapas do plano sem remover o modelo atual.</p>
+      <div class="form-grid">
+        <input id="manualNivelPlano" placeholder="Nível / Cargo. Ex: Supervisor SAC">
+        <input id="manualPontosPlano" type="number" placeholder="Pontos necessários">
+        <input id="manualDescricaoPlano" placeholder="Descrição / regra do plano">
+        <select id="manualSetorPlano">
+          <option>Geral</option><option>SAC</option><option>Logística</option><option>Vendas</option><option>Marketing</option>
+        </select>
+      </div>
+      <button onclick="salvarNivelPlanoManual()">Adicionar ao plano</button>
+    </div>` : ''}
+
+    <div class="card">
+      <h3>Planos importados</h3>
+      <div id="listaPlanosImportados" class="lista-arquivos-plano">
+        ${arquivosImportados.length ? arquivosImportados.map(a=>montarArquivoPlanoHTML(a,podeEditarPlano)).join('') : '<p class="muted">Nenhum plano importado ainda.</p>'}
+      </div>
+    </div>
+
+    ${niveisManuais.length ? `
+    <div class="card">
+      <h3>Itens adicionados manualmente</h3>
+      <table class="table">
+        <tr><th>Nível / Cargo</th><th>Setor</th><th>Pontos</th><th>Descrição</th>${podeEditarPlano ? '<th class="no-export">Ação</th>' : ''}</tr>
+        ${niveisManuais.map(n=>`
+          <tr>
+            <td>${n.nivel}</td>
+            <td>${n.setor || 'Geral'}</td>
+            <td>${n.pontos || 0}+</td>
+            <td>${n.descricao || '-'}</td>
+            ${podeEditarPlano ? `<td class="no-export"><button class="small-btn danger-btn" onclick="excluirNivelPlanoManual('${n.id}')">Excluir</button></td>` : ''}
+          </tr>
+        `).join('')}
+      </table>
+    </div>` : ''}
+
     <div id="planoExportArea">
       <div class="grid carreira-grid">
-        <div class="card">
-          <h3>Iniciante</h3>
-          <div class="value">0+</div>
-          <p class="muted">Começo da jornada.</p>
-        </div>
-
-        <div class="card">
-          <h3>Bronze</h3>
-          <div class="value">100+</div>
-          <p class="muted">Primeira evolução.</p>
-        </div>
-
-        <div class="card">
-          <h3>Prata</h3>
-          <div class="value">300+</div>
-          <p class="muted">Bom desempenho.</p>
-        </div>
-
-        <div class="card">
-          <h3>Ouro</h3>
-          <div class="value">600+</div>
-          <p class="muted">Alto desempenho.</p>
-        </div>
+        <div class="card"><h3>Iniciante</h3><div class="value">0+</div><p class="muted">Começo da jornada.</p></div>
+        <div class="card"><h3>Bronze</h3><div class="value">100+</div><p class="muted">Primeira evolução.</p></div>
+        <div class="card"><h3>Prata</h3><div class="value">300+</div><p class="muted">Bom desempenho.</p></div>
+        <div class="card"><h3>Ouro</h3><div class="value">600+</div><p class="muted">Alto desempenho.</p></div>
       </div>
 
       <div class="card">
@@ -696,14 +730,31 @@ async function planoCarreira(){
             <th>Setor</th>
             <th>Pontos</th>
             <th>Nível de carreira</th>
+            ${isAdmin() ? '<th class="no-export">Ajustar pontos</th>' : ''}
           </tr>
 
           ${(funcs||[]).map(f=>`
-            <tr>
+            <tr id="linha_func_${f.id}">
               <td>${f.nome}</td>
               <td>${f.setor||'-'}</td>
-              <td>${f.pontos||0}</td>
+              <td><strong class="pontos-valor">${f.pontos||0}</strong></td>
               <td>${nivelCarreira(f.pontos||0)}</td>
+              ${isAdmin() ? `<td class="no-export">
+                <div class="ajuste-pontos-box">
+                  <div class="quick-points">
+                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 10)">+10</button>
+                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 50)">+50</button>
+                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 100)">+100</button>
+                    <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -10)">-10</button>
+                    <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -50)">-50</button>
+                    <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -100)">-100</button>
+                  </div>
+                  <div class="manual-points">
+                    <input type="number" id="pontos_${f.id}" placeholder="+ ou -">
+                    <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0})">Salvar</button>
+                  </div>
+                </div>
+              </td>` : ''}
             </tr>
           `).join('')}
         </table>
