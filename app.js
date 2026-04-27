@@ -574,7 +574,8 @@ async function editarAcessosUsuario(id){
     <div class="card form-card">
       <h3>Editar acessos - ${u.nome || '-'}</h3>
       <div class="form-grid">
-        <input id="editNomeAcesso" placeholder="Nome" value="${u.nome || ''}">
+        <input id="editNomeAcesso" placeholder="Nome">
+        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> value="${u.nome || ''}">
         <input id="editUsuarioAcesso" placeholder="Usuário de login" value="${u.usuario || ''}">
         <input id="editEmailAcesso" placeholder="Email" value="${u.email || ''}">
         <select id="editNivelAcesso" onchange="marcarPermissoesPadrao('editPerm')">
@@ -616,7 +617,8 @@ function editarMeuUsuario(){
     <div class="card form-card">
       <h3>Meus dados</h3>
       <div class="form-grid">
-        <input id="editNome" placeholder="Nome" value="${usuarioAtual.nome || ''}">
+        <input id="editNome" placeholder="Nome">
+        <input id="novaSenhaUsuario" type="password" placeholder="Nova senha (opcional)"> value="${usuarioAtual.nome || ''}">
         <input id="editUsuario" placeholder="Usuário de login" value="${usuarioAtual.usuario || ''}">
         <select id="editSetor">
           ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===usuarioAtual.setor?'selected':''}>${s}</option>`).join('')}
@@ -629,18 +631,34 @@ function editarMeuUsuario(){
 }
 
 async function salvarMeuUsuario(){
-  const nome=document.getElementById('editNome').value.trim();
-  const usuario=document.getElementById('editUsuario').value.trim().toLowerCase();
-  const setor=document.getElementById('editSetor').value;
-  if(!nome || !usuario){ alert('Informe seu nome e usuário.'); return; }
+  const nome=document.getElementById('meuNome').value.trim();
+  const senha=document.getElementById('novaSenhaUsuario')?.value;
 
-  const {error}=await db.from('usuarios').update({nome,usuario,setor}).eq('id',usuarioAtual.id);
-  if(error){ alert('Erro ao salvar: ' + error.message); return; }
+  if(!nome){
+    alert('Informe o nome.');
+    return;
+  }
 
-  usuarioAtual={...usuarioAtual,nome,usuario,setor};
-  atualizarUserInfo();
-  aplicarPermissoes();
-  alert('Usuário atualizado!');
+  let updateData={nome};
+
+  if(senha){
+    const senha_hash = await gerarHashSenha(senha);
+    updateData.senha_hash = senha_hash;
+  }
+
+  const {error}=await db
+    .from('usuarios')
+    .update(updateData)
+    .eq('id',usuarioAtual.id);
+
+  if(error){
+    alert('Erro ao salvar: ' + error.message);
+    return;
+  }
+
+  alert('Dados atualizados!');
+  usuarioAtual.nome = nome;
+  editarMeuUsuario();
 }
 
 async function planoCarreira(){
