@@ -958,13 +958,19 @@ function exportarPlanoCSV(){
 }
 
 
+
+
+
+
+
+
 async function paginaFuncionariosAdmin(){
   if(!isAdmin()){
     alert('Somente admin pode acessar esta função.');
     return;
   }
 
-  document.getElementById('title').innerText='Funcionários';
+  document.getElementById('title').innerText='Editar Funcionários';
 
   document.getElementById('page').innerHTML=`
     <div class="card">
