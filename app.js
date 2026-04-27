@@ -15,6 +15,7 @@ const MENUS_SISTEMA = [
   {key:'metas', label:'Metas / Bônus'},
   {key:'metasIndividuais', label:'Metas Individuais'},
   {key:'criarUsuario', label:'Criar Usuário / Acessos'},
+  {key:'funcionariosAdmin', label:'Funcionários'},
   {key:'editarMeuUsuario', label:'Editar Meu Usuário'},
   {key:'planoCarreira', label:'Plano de Carreira'}
 ];
@@ -167,9 +168,9 @@ function nav(p){
   if(p==='vendas') return painelSetor('Vendas');
   if(p==='marketing') return painelSetor('Marketing');
   if(p==='criarUsuario') return criarUsuario();
+  if(p==='funcionariosAdmin') return paginaFuncionariosAdmin();
   if(p==='editarMeuUsuario') return editarMeuUsuario();
   if(p==='planoCarreira') return planoCarreira();
-  if(p==='funcionariosAdmin') return paginaFuncionariosAdmin();
 }
 
 async function dashboard(){
@@ -944,4 +945,133 @@ function exportarPlanoCSV(){
   const linhas=[['Nome','Setor','Pontos','Nível de carreira'],...ultimoPlanoCarreira.map(f=>[f.nome || '', f.setor || '-', f.pontos || 0, nivelCarreira(f.pontos || 0)])];
   const csv=linhas.map(l=>l.map(v=>`"${String(v).replaceAll('"','""')}"`).join(';')).join('\n');
   baixarArquivo(new Blob([csv],{type:'text/csv;charset=utf-8'}),'plano-de-carreira.csv');
+}
+
+
+async function paginaFuncionariosAdmin(){
+  if(!isAdmin()){
+    alert('Somente admin pode acessar esta função.');
+    return;
+  }
+
+  document.getElementById('title').innerText='Gerenciar Funcionários';
+
+  document.getElementById('page').innerHTML=`
+    <div class="card">
+      <h3>Editar e excluir funcionários</h3>
+      <p class="muted">Gerencie nome, setor, pontos e exclusão dos funcionários cadastrados.</p>
+      <div id="listaFuncionariosAdmin" class="usuarios-acesso"></div>
+    </div>
+  `;
+
+  carregarFuncionariosAdmin();
+}
+
+async function carregarFuncionariosAdmin(){
+  const box=document.getElementById('listaFuncionariosAdmin');
+  if(!box) return;
+
+  const {data,error}=await db.from('funcionarios').select('*').order('nome',{ascending:true});
+
+  if(error){
+    box.innerHTML=`<p class="muted">Erro ao carregar funcionários: ${error.message}</p>`;
+    return;
+  }
+
+  box.innerHTML=(data||[]).map(f=>`
+    <div class="user-access-card">
+      <div>
+        <strong>${f.nome || '-'}</strong><br>
+        <span class="muted">Setor: ${f.setor || '-'} • Pontos: ${f.pontos || 0}</span>
+      </div>
+      <div class="admin-actions">
+        <button class="small-btn" onclick="editarFuncionarioAdmin('${f.id}')">Editar</button>
+        <button class="small-btn danger-btn" onclick="excluirFuncionarioAdmin('${f.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('') || '<p class="muted">Nenhum funcionário encontrado.</p>';
+}
+
+async function editarFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode editar funcionários.');
+    return;
+  }
+
+  const {data:f,error}=await db.from('funcionarios').select('*').eq('id',id).maybeSingle();
+
+  if(error || !f){
+    alert('Erro ao buscar funcionário.');
+    return;
+  }
+
+  document.getElementById('title').innerText='Editar Funcionário';
+
+  document.getElementById('page').innerHTML=`
+    <div class="card form-card edit-func-card">
+      <h3>Editar funcionário</h3>
+      <p class="muted">Atualize os dados do funcionário.</p>
+
+      <div class="form-grid">
+        <input id="funcEditNome" placeholder="Nome do funcionário" value="${f.nome || ''}">
+        <select id="funcEditSetor">
+          ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
+      </div>
+
+      <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
+      <button class="secondary-btn" onclick="paginaFuncionariosAdmin()">Voltar</button>
+    </div>
+  `;
+}
+
+async function salvarFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode editar funcionários.');
+    return;
+  }
+
+  const nome=document.getElementById('funcEditNome').value.trim();
+  const setor=document.getElementById('funcEditSetor').value;
+  const pontos=Number(document.getElementById('funcEditPontos').value || 0);
+
+  if(!nome){
+    alert('Informe o nome do funcionário.');
+    return;
+  }
+
+  const {error}=await db
+    .from('funcionarios')
+    .update({nome,setor,pontos})
+    .eq('id',id);
+
+  if(error){
+    alert('Erro ao salvar funcionário: ' + error.message);
+    return;
+  }
+
+  alert('Funcionário atualizado!');
+  paginaFuncionariosAdmin();
+}
+
+async function excluirFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode excluir funcionários.');
+    return;
+  }
+
+  if(!confirm('Tem certeza que deseja excluir este funcionário? Essa ação não poderá ser desfeita.')){
+    return;
+  }
+
+  const {error}=await db.from('funcionarios').delete().eq('id',id);
+
+  if(error){
+    alert('Erro ao excluir funcionário: ' + error.message);
+    return;
+  }
+
+  alert('Funcionário excluído com sucesso!');
+  carregarFuncionariosAdmin();
 }
