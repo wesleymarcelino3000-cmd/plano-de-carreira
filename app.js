@@ -15,6 +15,7 @@ const MENUS_SISTEMA = [
   {key:'metas', label:'Metas / Bônus'},
   {key:'metasIndividuais', label:'Metas Individuais'},
   {key:'criarUsuario', label:'Criar Usuário / Acessos'},
+  {key:'funcionariosAdmin', label:'Funcionários'},
   {key:'editarMeuUsuario', label:'Editar Meu Usuário'},
   {key:'planoCarreira', label:'Plano de Carreira'}
 ];
@@ -466,22 +467,25 @@ function marcarPermissoesPadrao(prefixo){
   });
 }
 
+
 async function criarUsuario(){
   if(!isAdmin()){
     alert('Somente admin pode criar usuários.');
     return;
   }
 
-  document.getElementById('title').innerText='Criar Usuário e Acessos';
+  document.getElementById('title').innerText='Criar Usuário';
+
   document.getElementById('page').innerHTML=`
     <div class="card form-card">
       <h3>Novo usuário</h3>
-      <p class="muted">O login agora é feito por usuário e senha. O e-mail continua sendo usado internamente pelo Supabase.</p>
+      <p class="muted">Crie o usuário e vincule ao funcionário. O e-mail não é obrigatório.</p>
       <div class="form-grid">
         <input id="novoNome" placeholder="Nome do usuário">
         <input id="novoUsuario" placeholder="Usuário de login. Ex: joao.silva">
-        <input id="novoEmail" type="email" placeholder="Email interno do login">
+        <input id="novoEmail" type="email" placeholder="Email opcional">
         <input id="novaSenha" type="password" placeholder="Senha inicial">
+        <input id="fotoFuncionario" type="file" accept="image/*">
         <select id="novoNivel" onchange="marcarPermissoesPadrao('novoPerm')">
           <option value="funcionario">Funcionário</option>
           <option value="admin">Admin</option>
@@ -498,23 +502,36 @@ async function criarUsuario(){
       ${montarCheckboxPermissoes('novoPerm', permissoesPadrao('funcionario'))}
       <button onclick="salvarNovoUsuario()">Criar usuário</button>
     </div>
-    
+  `;
+}
+
+
 
 async function salvarNovoUsuario(){
   const nome=document.getElementById('novoNome').value.trim();
   const usuario=document.getElementById('novoUsuario').value.trim().toLowerCase();
-  const email=document.getElementById('novoEmail').value.trim();
+  const email=(document.getElementById('novoEmail')?.value || '').trim();
   const password=document.getElementById('novaSenha').value;
   const nivel=document.getElementById('novoNivel').value;
   const setor=document.getElementById('novoSetor').value;
   const permissoes=lerPermissoes('novoPerm');
 
-  if(!nome || !usuario || !email || !password){
-    alert('Preencha nome, usuário, email e senha.');
+  if(!nome || !usuario || !password){
+    alert('Preencha nome, usuário e senha.');
     return;
   }
 
-  const {data,error}=await db.auth.signUp({email,password});
+  const emailLogin = email || `${usuario}@innocarrer.local`;
+
+  let fotoUrl = null;
+  if(typeof prepararFotoFuncionario === 'function' && typeof uploadFotoFuncionario === 'function'){
+    const file = await prepararFotoFuncionario('fotoFuncionario');
+    fotoUrl = await uploadFotoFuncionario(file);
+  }else if(typeof converterImagemBase64 === 'function'){
+    fotoUrl = await converterImagemBase64('fotoFuncionario');
+  }
+
+  const {data,error}=await db.auth.signUp({email:emailLogin,password});
   if(error){
     alert('Erro ao criar login: ' + error.message);
     return;
@@ -530,7 +547,7 @@ async function salvarNovoUsuario(){
     id:userId,
     nome,
     usuario,
-    email,
+    email:emailLogin,
     nivel,
     setor,
     permissoes
@@ -542,10 +559,11 @@ async function salvarNovoUsuario(){
     return;
   }
 
-  await db.from('funcionarios').insert([{nome,setor,pontos:0}]);
+  await db.from('funcionarios').insert([{nome,setor,pontos:0,foto:fotoUrl}]);
   alert('Usuário criado com sucesso!');
   criarUsuario();
 }
+
 
 async function carregarUsuariosAcesso(){
   const box=document.getElementById('listaUsuariosAcesso');
@@ -939,9 +957,10 @@ function exportarPlanoCSV(){
   baixarArquivo(new Blob([csv],{type:'text/csv;charset=utf-8'}),'plano-de-carreira.csv');
 }
 
-function paginaFuncionariosAdmin(){
+
+async function paginaFuncionariosAdmin(){
   if(!isAdmin()){
-    alert('Somente admin pode acessar.');
+    alert('Somente admin pode acessar esta função.');
     return;
   }
 
@@ -950,9 +969,114 @@ function paginaFuncionariosAdmin(){
   document.getElementById('page').innerHTML=`
     <div class="card">
       <h3>Editar funcionários</h3>
-      <div id="listaFuncionariosAdmin"></div>
+      <p class="muted">Edite ou exclua funcionários cadastrados.</p>
+      <div id="listaFuncionariosAdmin" class="usuarios-acesso"></div>
     </div>
   `;
 
+  carregarFuncionariosAdmin();
+}
+
+async function carregarFuncionariosAdmin(){
+  const box=document.getElementById('listaFuncionariosAdmin');
+  if(!box) return;
+
+  const {data,error}=await db.from('funcionarios').select('*').order('nome',{ascending:true});
+
+  if(error){
+    box.innerHTML=`<p class="muted">Erro ao carregar funcionários: ${error.message}</p>`;
+    return;
+  }
+
+  box.innerHTML=(data||[]).map(f=>`
+    <div class="user-access-card">
+      <div>
+        <strong>${f.nome || '-'}</strong><br>
+        <span class="muted">Setor: ${f.setor || '-'} • Pontos: ${f.pontos || 0}</span>
+      </div>
+      <div class="admin-actions">
+        <button class="small-btn" onclick="editarFuncionarioAdmin('${f.id}')">Editar</button>
+        <button class="small-btn danger-btn" onclick="excluirFuncionarioAdmin('${f.id}')">Excluir</button>
+      </div>
+    </div>
+  `).join('') || '<p class="muted">Nenhum funcionário encontrado.</p>';
+}
+
+async function editarFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode editar funcionários.');
+    return;
+  }
+
+  const {data:f,error}=await db.from('funcionarios').select('*').eq('id',id).maybeSingle();
+
+  if(error || !f){
+    alert('Erro ao buscar funcionário.');
+    return;
+  }
+
+  document.getElementById('title').innerText='Editar Funcionário';
+
+  document.getElementById('page').innerHTML=`
+    <div class="card form-card edit-func-card">
+      <h3>Editar funcionário</h3>
+      <div class="form-grid">
+        <input id="funcEditNome" placeholder="Nome do funcionário" value="${f.nome || ''}">
+        <select id="funcEditSetor">
+          ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
+      </div>
+
+      <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
+      <button class="secondary-btn" onclick="paginaFuncionariosAdmin()">Voltar</button>
+    </div>
+  `;
+}
+
+async function salvarFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode editar funcionários.');
+    return;
+  }
+
+  const nome=document.getElementById('funcEditNome').value.trim();
+  const setor=document.getElementById('funcEditSetor').value;
+  const pontos=Number(document.getElementById('funcEditPontos').value || 0);
+
+  if(!nome){
+    alert('Informe o nome do funcionário.');
+    return;
+  }
+
+  const {error}=await db.from('funcionarios').update({nome,setor,pontos}).eq('id',id);
+
+  if(error){
+    alert('Erro ao salvar funcionário: ' + error.message);
+    return;
+  }
+
+  alert('Funcionário atualizado!');
+  paginaFuncionariosAdmin();
+}
+
+async function excluirFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode excluir funcionários.');
+    return;
+  }
+
+  if(!confirm('Tem certeza que deseja excluir este funcionário?')){
+    return;
+  }
+
+  const {error}=await db.from('funcionarios').delete().eq('id',id);
+
+  if(error){
+    alert('Erro ao excluir funcionário: ' + error.message);
+    return;
+  }
+
+  alert('Funcionário excluído!');
   carregarFuncionariosAdmin();
 }
