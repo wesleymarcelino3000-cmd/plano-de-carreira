@@ -84,7 +84,92 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 @media(max-width:900px){.ajuste-pontos-box{min-width:0}.quick-points,.manual-points{align-items:flex-start}.manual-points{flex-wrap:wrap}}
 
 
-/* ADMIN FUNCIONÁRIOS */
-.admin-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.edit-func-card{border-color:#22c55e55}
-@media(max-width:900px){.admin-actions{justify-content:flex-start}}
+/* FOTO NO DASHBOARD */
+.dashboard-fotos-card{
+  border-color:#22c55e44;
+}
+.dashboard-fotos-list{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+}
+.dash-func-card{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:#0b1512;
+  border:1px solid #26362f;
+  border-radius:14px;
+  padding:12px;
+}
+.dash-pos{
+  font-size:20px;
+  font-weight:900;
+  color:#7CFF4F;
+}
+.dash-foto{
+  width:56px;
+  height:56px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid #22c55e99;
+  box-shadow:0 0 18px #22c55e33;
+  background:#0b1512;
+}
+.dash-func-card div:last-child{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.dash-func-card span{
+  color:#a5b7aa;
+  font-size:13px;
+}
+
+/* CROP DE FOTO */
+.crop-modal{
+  position:fixed;
+  inset:0;
+  background:#000b;
+  z-index:99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+.crop-box{
+  width:390px;
+  max-width:100%;
+  background:#111827;
+  border:1px solid #22c55e77;
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 0 60px #22c55e33;
+  text-align:center;
+}
+#cropCanvasFuncionario{
+  width:320px;
+  max-width:100%;
+  border-radius:18px;
+  background:#0b1512;
+  border:1px solid #26362f;
+}
+.crop-controls{
+  display:grid;
+  gap:8px;
+  margin:14px 0;
+  text-align:left;
+}
+.crop-controls input{
+  width:100%;
+  accent-color:#22c55e;
+}
+.crop-actions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+@media(max-width:900px){
+  .dashboard-fotos-list{grid-template-columns:1fr}
+}

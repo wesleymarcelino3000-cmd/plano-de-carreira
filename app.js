@@ -15,7 +15,6 @@ const MENUS_SISTEMA = [
   {key:'metas', label:'Metas / Bônus'},
   {key:'metasIndividuais', label:'Metas Individuais'},
   {key:'criarUsuario', label:'Criar Usuário / Acessos'},
-  {key:'funcionariosAdmin', label:'Funcionários'},
   {key:'editarMeuUsuario', label:'Editar Meu Usuário'},
   {key:'planoCarreira', label:'Plano de Carreira'}
 ];
@@ -168,7 +167,6 @@ function nav(p){
   if(p==='vendas') return painelSetor('Vendas');
   if(p==='marketing') return painelSetor('Marketing');
   if(p==='criarUsuario') return criarUsuario();
-  if(p==='funcionariosAdmin') return paginaFuncionariosAdmin();
   if(p==='editarMeuUsuario') return editarMeuUsuario();
   if(p==='planoCarreira') return planoCarreira();
 }
@@ -196,6 +194,9 @@ async function dashboard(){
   const realizadoIndividual=(metasIndividuais||[]).reduce((s,m)=>s+(Number(m.realizado)||0),0);
   const percIndividual=totalMetasIndividuais ? Math.round((realizadoIndividual/totalMetasIndividuais)*100) : 0;
 
+  const topFuncionarios=(funcs||[]).slice().sort((a,b)=>(b.pontos||0)-(a.pontos||0)).slice(0,3);
+
+
   document.getElementById('page').innerHTML=`
     <div class="grid">
       <div class="card"><h3>Funcionários</h3><div class="value">${funcs?.length||0}</div></div>
@@ -204,6 +205,21 @@ async function dashboard(){
       <div class="card"><h3>Realizado</h3><div class="value">${perc}%</div></div>
       <div class="card"><h3>Metas Individuais</h3><div class="value">${totalMetasIndividuais}</div></div>
       <div class="card"><h3>Individual Realizado</h3><div class="value">${percIndividual}%</div></div>
+    </div>
+    <div class="card dashboard-fotos-card">
+      <h3>Destaques do Ranking</h3>
+      <div class="dashboard-fotos-list">
+        ${topFuncionarios.length ? topFuncionarios.map((f,i)=>`
+          <div class="dash-func-card">
+            <div class="dash-pos">#${i+1}</div>
+            <img class="dash-foto" src="${f.foto || 'logo_inno_life.webp'}" alt="Foto do funcionário">
+            <div>
+              <strong>${f.nome || '-'}</strong>
+              <span>${f.setor || '-'} • ${f.pontos || 0} pts</span>
+            </div>
+          </div>
+        `).join('') : '<p class="muted">Nenhum funcionário cadastrado.</p>'}
+      </div>
     </div>
     <div class="two">
       <div class="card"><h3>Ranking por Pontos</h3><canvas id="chartRanking"></canvas></div>
@@ -483,6 +499,7 @@ async function criarUsuario(){
         <input id="novoUsuario" placeholder="Usuário de login. Ex: joao.silva">
         <input id="novoEmail" type="email" placeholder="Email interno do login">
         <input id="novaSenha" type="password" placeholder="Senha inicial">
+        <input id="fotoFuncionario" type="file" accept="image/*">
         <select id="novoNivel" onchange="marcarPermissoesPadrao('novoPerm')">
           <option value="funcionario">Funcionário</option>
           <option value="admin">Admin</option>
@@ -508,21 +525,27 @@ async function criarUsuario(){
   carregarUsuariosAcesso();
 }
 
+
 async function salvarNovoUsuario(){
   const nome=document.getElementById('novoNome').value.trim();
   const usuario=document.getElementById('novoUsuario').value.trim().toLowerCase();
-  const email=document.getElementById('novoEmail').value.trim();
+  const email=(document.getElementById('novoEmail')?.value || '').trim();
   const password=document.getElementById('novaSenha').value;
   const nivel=document.getElementById('novoNivel').value;
   const setor=document.getElementById('novoSetor').value;
   const permissoes=lerPermissoes('novoPerm');
 
-  if(!nome || !usuario || !email || !password){
-    alert('Preencha nome, usuário, email e senha.');
+  if(!nome || !usuario || !password){
+    alert('Preencha nome, usuário e senha.');
     return;
   }
 
-  const {data,error}=await db.auth.signUp({email,password});
+  const emailLogin = email || `${usuario}@innocarrer.local`;
+
+  const file = await prepararFotoFuncionario('fotoFuncionario');
+  const fotoUrl = await uploadFotoFuncionario(file);
+
+  const {data,error}=await db.auth.signUp({email:emailLogin,password});
   if(error){
     alert('Erro ao criar login: ' + error.message);
     return;
@@ -538,7 +561,7 @@ async function salvarNovoUsuario(){
     id:userId,
     nome,
     usuario,
-    email,
+    email:emailLogin,
     nivel,
     setor,
     permissoes
@@ -550,10 +573,11 @@ async function salvarNovoUsuario(){
     return;
   }
 
-  await db.from('funcionarios').insert([{nome,setor,pontos:0}]);
+  await db.from('funcionarios').insert([{nome,setor,pontos:0,foto:fotoUrl}]);
   alert('Usuário criado com sucesso!');
   criarUsuario();
 }
+
 
 async function carregarUsuariosAcesso(){
   const box=document.getElementById('listaUsuariosAcesso');
@@ -947,131 +971,137 @@ function exportarPlanoCSV(){
   baixarArquivo(new Blob([csv],{type:'text/csv;charset=utf-8'}),'plano-de-carreira.csv');
 }
 
+async function uploadFotoFuncionario(file){
+  if(!file) return null;
 
-async function paginaFuncionariosAdmin(){
-  if(!isAdmin()){
-    alert('Somente admin pode acessar esta função.');
-    return;
-  }
+  const fileName = `funcionario_${Date.now()}.png`;
 
-  document.getElementById('title').innerText='Gerenciar Funcionários';
-
-  document.getElementById('page').innerHTML=`
-    <div class="card">
-      <h3>Editar e excluir funcionários</h3>
-      <p class="muted">Gerencie nome, setor, pontos e exclusão dos funcionários cadastrados.</p>
-      <div id="listaFuncionariosAdmin" class="usuarios-acesso"></div>
-    </div>
-  `;
-
-  carregarFuncionariosAdmin();
-}
-
-async function carregarFuncionariosAdmin(){
-  const box=document.getElementById('listaFuncionariosAdmin');
-  if(!box) return;
-
-  const {data,error}=await db.from('funcionarios').select('*').order('nome',{ascending:true});
+  const { data, error } = await db.storage
+    .from('fotos-funcionarios')
+    .upload(fileName, file);
 
   if(error){
-    box.innerHTML=`<p class="muted">Erro ao carregar funcionários: ${error.message}</p>`;
-    return;
+    alert('Erro ao enviar foto: ' + error.message);
+    return null;
   }
 
-  box.innerHTML=(data||[]).map(f=>`
-    <div class="user-access-card">
-      <div>
-        <strong>${f.nome || '-'}</strong><br>
-        <span class="muted">Setor: ${f.setor || '-'} • Pontos: ${f.pontos || 0}</span>
-      </div>
-      <div class="admin-actions">
-        <button class="small-btn" onclick="editarFuncionarioAdmin('${f.id}')">Editar</button>
-        <button class="small-btn danger-btn" onclick="excluirFuncionarioAdmin('${f.id}')">Excluir</button>
-      </div>
-    </div>
-  `).join('') || '<p class="muted">Nenhum funcionário encontrado.</p>';
+  const { data: publicUrl } = db.storage
+    .from('fotos-funcionarios')
+    .getPublicUrl(fileName);
+
+  return publicUrl.publicUrl;
 }
 
-async function editarFuncionarioAdmin(id){
-  if(!isAdmin()){
-    alert('Somente admin pode editar funcionários.');
+
+let fotoCropCallback = null;
+
+function abrirCorteFotoFuncionario(file, callback){
+  if(!file){
+    callback(null);
     return;
   }
 
-  const {data:f,error}=await db.from('funcionarios').select('*').eq('id',id).maybeSingle();
+  fotoCropCallback = callback;
 
-  if(error || !f){
-    alert('Erro ao buscar funcionário.');
-    return;
-  }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    let modal = document.getElementById('cropFotoModal');
 
-  document.getElementById('title').innerText='Editar Funcionário';
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'cropFotoModal';
+      modal.className = 'crop-modal hidden';
+      modal.innerHTML = `
+        <div class="crop-box">
+          <h3>Cortar foto do funcionário</h3>
+          <p class="muted">Ajuste a imagem antes de salvar. A foto será padronizada em formato quadrado.</p>
+          <canvas id="cropCanvasFuncionario" width="320" height="320"></canvas>
+          <div class="crop-controls">
+            <label>Zoom</label>
+            <input id="cropZoomFuncionario" type="range" min="1" max="3" step="0.05" value="1">
+          </div>
+          <div class="crop-actions">
+            <button onclick="confirmarCorteFotoFuncionario()">Usar foto</button>
+            <button class="secondary-btn" onclick="cancelarCorteFotoFuncionario()">Cancelar</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
 
-  document.getElementById('page').innerHTML=`
-    <div class="card form-card edit-func-card">
-      <h3>Editar funcionário</h3>
-      <p class="muted">Atualize os dados do funcionário.</p>
+    modal.classList.remove('hidden');
 
-      <div class="form-grid">
-        <input id="funcEditNome" placeholder="Nome do funcionário" value="${f.nome || ''}">
-        <select id="funcEditSetor">
-          ${['Geral','SAC','Logística','Vendas','Marketing'].map(s=>`<option ${s===f.setor?'selected':''}>${s}</option>`).join('')}
-        </select>
-        <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
-      </div>
+    window.cropFotoImagem = new Image();
+    window.cropFotoImagem.onload = () => desenharCropFotoFuncionario();
+    window.cropFotoImagem.src = e.target.result;
 
-      <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
-      <button class="secondary-btn" onclick="paginaFuncionariosAdmin()">Voltar</button>
-    </div>
-  `;
+    setTimeout(()=>{
+      const zoom = document.getElementById('cropZoomFuncionario');
+      if(zoom){
+        zoom.value = 1;
+        zoom.oninput = desenharCropFotoFuncionario;
+      }
+    },50);
+  };
+
+  reader.readAsDataURL(file);
 }
 
-async function salvarFuncionarioAdmin(id){
-  if(!isAdmin()){
-    alert('Somente admin pode editar funcionários.');
-    return;
-  }
+function desenharCropFotoFuncionario(){
+  const canvas = document.getElementById('cropCanvasFuncionario');
+  const img = window.cropFotoImagem;
+  if(!canvas || !img) return;
 
-  const nome=document.getElementById('funcEditNome').value.trim();
-  const setor=document.getElementById('funcEditSetor').value;
-  const pontos=Number(document.getElementById('funcEditPontos').value || 0);
+  const ctx = canvas.getContext('2d');
+  const zoom = Number(document.getElementById('cropZoomFuncionario')?.value || 1);
 
-  if(!nome){
-    alert('Informe o nome do funcionário.');
-    return;
-  }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#0b1512';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  const {error}=await db
-    .from('funcionarios')
-    .update({nome,setor,pontos})
-    .eq('id',id);
+  const size = Math.min(img.width, img.height) / zoom;
+  const sx = (img.width - size) / 2;
+  const sy = (img.height - size) / 2;
 
-  if(error){
-    alert('Erro ao salvar funcionário: ' + error.message);
-    return;
-  }
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(160,160,150,0,Math.PI*2);
+  ctx.clip();
+  ctx.drawImage(img, sx, sy, size, size, 10, 10, 300, 300);
+  ctx.restore();
 
-  alert('Funcionário atualizado!');
-  paginaFuncionariosAdmin();
+  ctx.beginPath();
+  ctx.arc(160,160,150,0,Math.PI*2);
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 4;
+  ctx.stroke();
 }
 
-async function excluirFuncionarioAdmin(id){
-  if(!isAdmin()){
-    alert('Somente admin pode excluir funcionários.');
-    return;
+function confirmarCorteFotoFuncionario(){
+  const canvas = document.getElementById('cropCanvasFuncionario');
+  if(!canvas || !fotoCropCallback) return;
+
+  canvas.toBlob(blob=>{
+    const file = new File([blob], `foto_funcionario_${Date.now()}.png`, {type:'image/png'});
+    document.getElementById('cropFotoModal')?.classList.add('hidden');
+    fotoCropCallback(file);
+    fotoCropCallback = null;
+  }, 'image/png', 0.92);
+}
+
+function cancelarCorteFotoFuncionario(){
+  document.getElementById('cropFotoModal')?.classList.add('hidden');
+  if(fotoCropCallback){
+    fotoCropCallback(null);
+    fotoCropCallback = null;
   }
+}
 
-  if(!confirm('Tem certeza que deseja excluir este funcionário? Essa ação não poderá ser desfeita.')){
-    return;
-  }
+async function prepararFotoFuncionario(idInput='fotoFuncionario'){
+  const file = document.getElementById(idInput)?.files?.[0];
+  if(!file) return null;
 
-  const {error}=await db.from('funcionarios').delete().eq('id',id);
-
-  if(error){
-    alert('Erro ao excluir funcionário: ' + error.message);
-    return;
-  }
-
-  alert('Funcionário excluído com sucesso!');
-  carregarFuncionariosAdmin();
+  return await new Promise(resolve=>{
+    abrirCorteFotoFuncionario(file, resolve);
+  });
 }
