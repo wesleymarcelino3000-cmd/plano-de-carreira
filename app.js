@@ -1,6 +1,9 @@
 let usuarioAtual = null;
 let charts = [];
 let ultimoPlanoCarreira = [];
+let canalFuncionariosRealtime = null;
+let paginaAtual = '';
+let refreshRealtimeTimer = null;
 
 const MENUS_SISTEMA = [
   {key:'dashboard', label:'Dashboard'},
@@ -118,6 +121,7 @@ async function login(){
 
   atualizarUserInfo();
   aplicarPermissoes();
+  iniciarRealtimeFuncionarios();
   nav(usuarioPode('dashboard') ? 'dashboard' : primeiroMenuPermitido());
 }
 
@@ -146,6 +150,7 @@ async function logout(){
 }
 
 function nav(p){
+  paginaAtual = p;
   limparGraficos();
 
   if(!usuarioPode(p)){
@@ -706,8 +711,29 @@ async function planoCarreira(){
       <div class="card">
         <h3>Funcionários por evolução</h3>
         <table class="table">
-          <tr><th>Nome</th><th>Setor</th><th>Pontos</th><th>Nível de carreira</th></tr>
-          ${(funcs||[]).map(f=>`<tr><td>${f.nome}</td><td>${f.setor||'-'}</td><td>${f.pontos||0}</td><td>${nivelCarreira(f.pontos||0)}</td></tr>`).join('')}
+          <tr><th>Nome</th><th>Setor</th><th>Pontos</th><th>Nível de carreira</th>${isAdmin() ? '<th class="no-export">Ajustar pontos</th>' : ''}</tr>
+          ${(funcs||[]).map(f=>`<tr id="linha_func_${f.id}">
+            <td>${f.nome}</td>
+            <td>${f.setor||'-'}</td>
+            <td><strong class="pontos-valor">${f.pontos||0}</strong></td>
+            <td>${nivelCarreira(f.pontos||0)}</td>
+            ${isAdmin() ? `<td class="no-export">
+              <div class="ajuste-pontos-box">
+                <div class="quick-points">
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 10)">+10</button>
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 50)">+50</button>
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, 100)">+100</button>
+                  <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -10)">-10</button>
+                  <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -50)">-50</button>
+                  <button class="small-btn danger-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0}, -100)">-100</button>
+                </div>
+                <div class="manual-points">
+                  <input type="number" id="pontos_${f.id}" placeholder="+ ou -">
+                  <button class="small-btn" onclick="ajustarPontos('${f.id}', ${f.pontos||0})">Salvar</button>
+                </div>
+              </div>
+            </td>` : ''}
+          </tr>`).join('')}
         </table>
       </div>
     </div>
@@ -775,6 +801,80 @@ function excluirNivelPlanoManual(id){
   salvarNiveisPlanoManual(carregarNiveisPlanoManual().filter(n=>n.id!==id));
   planoCarreira();
 }
+function mostrarToast(msg, tipo='ok'){
+  let toast=document.getElementById('toastSistema');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='toastSistema';
+    document.body.appendChild(toast);
+  }
+  toast.className=`toast-sistema ${tipo} show`;
+  toast.innerText=msg;
+  clearTimeout(window.toastTimerSistema);
+  window.toastTimerSistema=setTimeout(()=>toast.classList.remove('show'),2200);
+}
+
+function animarLinhaFuncionario(id){
+  const linha=document.getElementById(`linha_func_${id}`);
+  if(!linha) return;
+  linha.classList.remove('linha-atualizada');
+  void linha.offsetWidth;
+  linha.classList.add('linha-atualizada');
+}
+
+async function ajustarPontos(id, pontosAtuais, valorRapido=null){
+  if(!isAdmin()){
+    alert('Somente admin pode ajustar pontos.');
+    return;
+  }
+
+  const input=document.getElementById(`pontos_${id}`);
+  const valor = valorRapido !== null ? Number(valorRapido) : Number(input?.value || 0);
+
+  if(!valor){
+    alert('Informe um valor para ajustar. Use positivo para adicionar ou negativo para diminuir.');
+    return;
+  }
+
+  const novosPontos = Math.max(0, Number(pontosAtuais || 0) + valor);
+
+  const {error}=await db
+    .from('funcionarios')
+    .update({pontos: novosPontos})
+    .eq('id', id);
+
+  if(error){
+    alert('Erro ao atualizar pontos: ' + error.message);
+    return;
+  }
+
+  if(input) input.value='';
+  animarLinhaFuncionario(id);
+  mostrarToast(valor > 0 ? `+${valor} pontos adicionados` : `${valor} pontos removidos`);
+  setTimeout(()=>planoCarreira(),450);
+}
+
+function iniciarRealtimeFuncionarios(){
+  if(canalFuncionariosRealtime || !db?.channel) return;
+
+  canalFuncionariosRealtime = db
+    .channel('funcionarios-pontos-realtime')
+    .on('postgres_changes', {event:'*', schema:'public', table:'funcionarios'}, payload=>{
+      clearTimeout(refreshRealtimeTimer);
+      refreshRealtimeTimer=setTimeout(()=>{
+        if(paginaAtual==='ranking') ranking();
+        if(paginaAtual==='planoCarreira') planoCarreira();
+        if(paginaAtual==='dashboard') dashboard();
+        if(['sac','logistica','vendas','marketing'].includes(paginaAtual)){
+          const setor = paginaAtual==='sac' ? 'SAC' : paginaAtual==='logistica' ? 'Logística' : paginaAtual==='vendas' ? 'Vendas' : 'Marketing';
+          painelSetor(setor);
+        }
+        mostrarToast('Ranking atualizado em tempo real');
+      },350);
+    })
+    .subscribe();
+}
+
 function nivelCarreira(pontos){
   if(pontos>=600) return 'Ouro';
   if(pontos>=300) return 'Prata';
