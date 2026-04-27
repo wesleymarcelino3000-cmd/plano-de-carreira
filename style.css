@@ -47,3 +47,15 @@ input,select{padding:12px;border-radius:10px;border:1px solid #26362f;background
 .small-btn{padding:8px 10px;border-radius:8px;font-size:12px;min-height:auto;text-align:center!important;display:inline-flex!important;width:auto!important;margin:0!important;justify-content:center;align-items:center}
 .danger-btn{background:#ef4444;color:white}
 .danger-btn:hover{background:#dc2626!important;color:white!important}
+
+/* INNOCARRER - ACESSOS E EXPORTAÇÃO */
+.permissoes-box{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0 18px}
+.check-line{display:flex;align-items:center;gap:10px;background:#0b1512;border:1px solid #26362f;border-radius:10px;padding:10px;color:#eaffef}
+.check-line input{width:auto;margin:0;accent-color:#22c55e}
+.usuarios-acesso{display:grid;gap:10px}
+.user-access-card{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0b1512;border:1px solid #26362f;border-radius:12px;padding:12px}
+.secondary-btn{background:#26362f;color:#eaffef;margin-left:8px}
+.export-card button{margin:5px 5px 5px 0}
+#planoExportArea{padding:2px}
+@media(max-width:900px){.permissoes-box{grid-template-columns:1fr}.user-access-card{align-items:flex-start;flex-direction:column}}
+@media print{.sidebar,.export-card,.no-export{display:none!important}.content{margin-left:0;width:100%;padding:0}body{background:#fff;color:#111}.card{color:#111;background:#fff;border:1px solid #ccc}.value{color:#111}.muted{color:#555}.badge{color:#111;background:#eee}}
