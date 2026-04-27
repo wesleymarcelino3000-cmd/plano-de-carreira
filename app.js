@@ -450,6 +450,7 @@ function marcarPermissoesPadrao(prefixo){
 }
 
 
+
 async function criarUsuario(){
   if(!isAdmin()){
     alert('Somente admin pode criar usuários.');
@@ -503,7 +504,21 @@ async function salvarNovoUsuario(){
     return;
   }
 
-  const emailLogin = email || `${usuario}@innocarrer.local`;
+  const {data:jaExiste,error:erroBusca}=await db
+    .from('usuarios')
+    .select('id')
+    .eq('usuario',usuario)
+    .maybeSingle();
+
+  if(erroBusca){
+    alert('Erro ao validar usuário: ' + erroBusca.message);
+    return;
+  }
+
+  if(jaExiste){
+    alert('Esse usuário de login já existe. Escolha outro.');
+    return;
+  }
 
   let fotoUrl = null;
   if(typeof prepararFotoFuncionario === 'function' && typeof uploadFotoFuncionario === 'function'){
@@ -513,35 +528,40 @@ async function salvarNovoUsuario(){
     fotoUrl = await converterImagemBase64('fotoFuncionario');
   }
 
-  
+  const senha_hash = await gerarHashSenha(password);
 
-  const userId=data?.user?.id;
-  if(!userId){
-    alert('O Supabase não retornou o ID do usuário. Verifique se o cadastro por email está ativo.');
-    return;
-  }
-
-  const novoUsuario={
-    id:userId,
+  const novoUsuario = {
+    id: gerarIdLocal(),
     nome,
     usuario,
-    email:emailLogin,
+    email: email || null,
+    senha_hash,
     nivel,
     setor,
     permissoes
   };
 
-  const {error:erroPerfil}=await db.from('usuarios').upsert([novoUsuario]);
+  const {error:erroPerfil}=await db
+    .from('usuarios')
+    .insert([novoUsuario]);
+
   if(erroPerfil){
-    alert('Login criado, mas houve erro ao salvar perfil: ' + erroPerfil.message);
+    alert('Erro ao salvar usuário: ' + erroPerfil.message);
     return;
   }
 
-  await db.from('funcionarios').insert([{nome,setor,pontos:0,foto:fotoUrl}]);
+  const {error:erroFunc}=await db
+    .from('funcionarios')
+    .insert([{nome,setor,pontos:0,foto:fotoUrl}]);
+
+  if(erroFunc){
+    alert('Usuário criado, mas houve erro ao criar funcionário: ' + erroFunc.message);
+    return;
+  }
+
   alert('Usuário criado com sucesso!');
   criarUsuario();
 }
-
 
 async function carregarUsuariosAcesso(){
   const box=document.getElementById('listaUsuariosAcesso');

@@ -1,0 +1,1 @@
+Correção: criação de usuário sem Supabase Auth, sem erro de email rate limit. Rode supabase_sem_rate_limit.sql.
