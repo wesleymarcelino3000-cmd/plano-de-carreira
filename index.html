@@ -9,20 +9,17 @@
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 </head>
 <body>
 
 <div id="login" class="login">
   <div class="login-card">
     <div class="logo-login">
-      <img src="logo_inno_life.webp" alt="Logo InnoLife">
+      <img src="logo_inno_life.webp" alt="Logo InnoCarrer">
     </div>
     <h1>InnoCarrer</h1>
     <p>Gestão Interna por Setor</p>
-    <input id="usuarioLogin" placeholder="Usuário">
+    <input id="email" placeholder="Email">
     <input id="senha" type="password" placeholder="Senha">
     <button onclick="login()">Entrar</button>
   </div>
@@ -31,22 +28,22 @@
 <div id="app" class="app hidden">
   <aside class="sidebar">
     <div class="logo-box">
-      <img src="logo_inno_life.webp" class="logo-img" alt="Logo InnoLife">
+      <img src="logo_inno_life.webp" class="logo-img" alt="Logo InnoCarrer">
     </div>
-    <h2>INNOCARRER</h2>
+    <h2>INNOLIFE</h2>
     <small id="userInfo">Carregando...</small>
 
-    <button onclick="nav('dashboard')" data-menu="dashboard"><span>📊</span> Dashboard</button>
-    <button onclick="nav('sac')" data-setor="SAC" data-menu="sac"><span>🎧</span> SAC</button>
-    <button onclick="nav('logistica')" data-setor="Logística" data-menu="logistica"><span>🚚</span> Logística</button>
-    <button onclick="nav('vendas')" data-setor="Vendas" data-menu="vendas"><span>🛒</span> Vendas</button>
-    <button onclick="nav('marketing')" data-setor="Marketing" data-menu="marketing"><span>📣</span> Marketing</button>
-    <button onclick="nav('ranking')" data-menu="ranking"><span>🏆</span> Ranking</button>
-    <button onclick="nav('metas')" id="btnMetas" data-menu="metas"><span>🎯</span> Metas / Bônus</button>
-    <button onclick="nav('metasIndividuais')" id="btnMetasIndividuais" data-menu="metasIndividuais"><span>👥</span> Metas Individuais <small class="admin-tag">ADMIN</small></button>
-    <button onclick="nav('criarUsuario')" id="btnCriarUsuario" data-menu="criarUsuario"><span>👤</span> Criar Usuário <small class="admin-tag">ADMIN</small></button>
-    <button onclick="nav('editarMeuUsuario')" data-menu="editarMeuUsuario"><span>✏️</span> Editar Meu Usuário</button>
-    <button onclick="nav('planoCarreira')" data-menu="planoCarreira"><span>📈</span> Plano de Carreira</button>
+    <button onclick="nav('dashboard')"><span>📊</span> Dashboard</button>
+    <button onclick="nav('sac')" data-setor="SAC"><span>🎧</span> SAC</button>
+    <button onclick="nav('logistica')" data-setor="Logística"><span>🚚</span> Logística</button>
+    <button onclick="nav('vendas')" data-setor="Vendas"><span>🛒</span> Vendas</button>
+    <button onclick="nav('marketing')" data-setor="Marketing"><span>📣</span> Marketing</button>
+    <button onclick="nav('ranking')"><span>🏆</span> Ranking</button>
+    <button onclick="nav('metas')" id="btnMetas"><span>🎯</span> Metas / Bônus</button>
+    <button onclick="nav('metasIndividuais')" id="btnMetasIndividuais"><span>👥</span> Metas Individuais <small class="admin-tag">ADMIN</small></button>
+    <button onclick="nav('criarUsuario')" id="btnCriarUsuario"><span>👤</span> Criar Usuário <small class="admin-tag">ADMIN</small></button>
+    <button onclick="nav('editarMeuUsuario')"><span>✏️</span> Editar Meu Usuário</button>
+    <button onclick="nav('planoCarreira')"><span>📈</span> Plano de Carreira</button>
     <hr class="menu-line">
     <button onclick="logout()" class="btn-sair"><span>🚪</span> Sair</button>
   </aside>
