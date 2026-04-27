@@ -944,3 +944,24 @@ function exportarPlanoCSV(){
   const csv=linhas.map(l=>l.map(v=>`"${String(v).replaceAll('"','""')}"`).join(';')).join('\n');
   baixarArquivo(new Blob([csv],{type:'text/csv;charset=utf-8'}),'plano-de-carreira.csv');
 }
+
+async function excluirFuncionarioAdmin(id){
+  if(!isAdmin()){
+    alert('Somente admin pode excluir funcionários.');
+    return;
+  }
+
+  if(!confirm('Tem certeza que deseja excluir este funcionário?')){
+    return;
+  }
+
+  const {error}=await db.from('funcionarios').delete().eq('id',id);
+
+  if(error){
+    alert('Erro ao excluir funcionário: ' + error.message);
+    return;
+  }
+
+  alert('Funcionário excluído com sucesso!');
+  carregarFuncionariosAdmin();
+}
