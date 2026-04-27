@@ -648,23 +648,60 @@ async function planoCarreira(){
   document.getElementById('title').innerText='Plano de Carreira';
   const {data:funcs}=await db.from('funcionarios').select('*').order('pontos',{ascending:false});
   ultimoPlanoCarreira = funcs || [];
+  const niveisManuais = carregarNiveisPlanoManual();
+  const arquivosImportados = carregarArquivosPlanoImportado();
+  const podeEditarPlano = isAdmin();
 
   document.getElementById('page').innerHTML=`
-    <div class="card export-card no-export">
-      <h3>Exportar Plano de Carreira</h3>
-      <p class="muted">Exporte em imagem, PDF, Word, CSV ou imprima.</p>
-      <button onclick="exportarPlanoImagem()">Exportar imagem</button>
-      <button onclick="exportarPlanoPDF()">Exportar PDF</button>
-      <button onclick="exportarPlanoWord()">Exportar Word</button>
-      <button onclick="exportarPlanoCSV()">Exportar CSV</button>
-      <button onclick="window.print()">Imprimir</button>
+    ${podeEditarPlano ? `
+    <div class="card import-card no-export">
+      <h3>Importar Plano de Carreira</h3>
+      <p class="muted">Importe imagem, PDF, Word, Excel, CSV ou TXT do plano de carreira.</p>
+      <div class="form-grid">
+        <input id="arquivoPlanoCarreira" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*,application/pdf">
+        <input id="nomeArquivoPlano" placeholder="Nome para identificar o plano. Ex: Plano 2026">
+      </div>
+      <button onclick="importarPlanoCarreira()">Importar plano</button>
     </div>
+
+    <div class="card form-card no-export">
+      <h3>Adicionar manualmente pelo Admin</h3>
+      <p class="muted">Cadastre níveis, cargos ou etapas do plano sem remover o modelo atual.</p>
+      <div class="form-grid">
+        <input id="manualNivelPlano" placeholder="Nível / Cargo. Ex: Supervisor SAC">
+        <input id="manualPontosPlano" type="number" placeholder="Pontos necessários">
+        <input id="manualDescricaoPlano" placeholder="Descrição / regra do plano">
+        <select id="manualSetorPlano">
+          <option>Geral</option><option>SAC</option><option>Logística</option><option>Vendas</option><option>Marketing</option>
+        </select>
+      </div>
+      <button onclick="salvarNivelPlanoManual()">Adicionar ao plano</button>
+    </div>` : `
+    <div class="card no-export">
+      <h3>Plano de Carreira</h3>
+      <p class="muted">Você pode visualizar o plano de carreira. A importação e inclusão manual são liberadas apenas para Admin.</p>
+    </div>`}
+
+    <div class="card">
+      <h3>Planos importados</h3>
+      <div id="listaPlanosImportados" class="lista-arquivos-plano">
+        ${arquivosImportados.length ? arquivosImportados.map(a=>montarArquivoPlanoHTML(a,podeEditarPlano)).join('') : '<p class="muted">Nenhum plano importado ainda.</p>'}
+      </div>
+    </div>
+
     <div id="planoExportArea">
       <div class="grid carreira-grid">
         <div class="card"><h3>Iniciante</h3><div class="value">0+</div><p class="muted">Começo da jornada.</p></div>
         <div class="card"><h3>Bronze</h3><div class="value">100+</div><p class="muted">Primeira evolução.</p></div>
         <div class="card"><h3>Prata</h3><div class="value">300+</div><p class="muted">Bom desempenho.</p></div>
         <div class="card"><h3>Ouro</h3><div class="value">600+</div><p class="muted">Alto desempenho.</p></div>
+        ${niveisManuais.map(n=>`
+          <div class="card manual-plano-card">
+            <h3>${n.nivel}</h3>
+            <div class="value">${n.pontos || 0}+</div>
+            <p class="muted">${n.setor || 'Geral'} • ${n.descricao || 'Sem descrição'}</p>
+            ${podeEditarPlano ? `<button class="small-btn danger-btn no-export" onclick="excluirNivelPlanoManual('${n.id}')">Excluir</button>` : ''}
+          </div>`).join('')}
       </div>
       <div class="card">
         <h3>Funcionários por evolução</h3>
@@ -677,6 +714,67 @@ async function planoCarreira(){
   `;
 }
 
+function carregarArquivosPlanoImportado(){
+  try{return JSON.parse(localStorage.getItem('planosCarreiraImportados') || '[]');}
+  catch(e){return [];}
+}
+function salvarArquivosPlanoImportado(lista){localStorage.setItem('planosCarreiraImportados', JSON.stringify(lista));}
+function montarArquivoPlanoHTML(a,podeExcluir=false){
+  const isImagem=(a.tipo||'').startsWith('image/');
+  const isPdf=(a.tipo||'').includes('pdf');
+  return `<div class="arquivo-plano-card">
+    <div><strong>${a.nomeExibicao || a.nome || 'Plano importado'}</strong><br><span class="muted">${a.nome || ''} • ${a.data || ''}</span></div>
+    ${isImagem ? `<img src="${a.conteudo}" class="preview-plano" alt="Plano importado">` : ''}
+    ${isPdf ? `<a class="link-plano" href="${a.conteudo}" target="_blank">Abrir PDF</a>` : `<a class="link-plano" href="${a.conteudo}" download="${a.nome || 'plano'}">Baixar arquivo</a>`}
+    ${podeExcluir ? `<button class="small-btn danger-btn" onclick="excluirPlanoImportado('${a.id}')">Excluir</button>` : ''}
+  </div>`;
+}
+function importarPlanoCarreira(){
+  if(!isAdmin()){ alert('Somente admin pode importar o plano de carreira.'); return; }
+  const input=document.getElementById('arquivoPlanoCarreira');
+  const arquivo=input?.files?.[0];
+  if(!arquivo){ alert('Selecione um arquivo para importar.'); return; }
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const lista=carregarArquivosPlanoImportado();
+    const nomeExibicao=(document.getElementById('nomeArquivoPlano')?.value || '').trim() || arquivo.name;
+    lista.unshift({id:Date.now().toString(),nome:arquivo.name,nomeExibicao,tipo:arquivo.type || 'arquivo',data:new Date().toLocaleString('pt-BR'),conteudo:e.target.result});
+    salvarArquivosPlanoImportado(lista);
+    alert('Plano de carreira importado com sucesso!');
+    planoCarreira();
+  };
+  reader.readAsDataURL(arquivo);
+}
+function excluirPlanoImportado(id){
+  if(!isAdmin()){ alert('Somente admin pode excluir planos importados.'); return; }
+  if(!confirm('Deseja excluir este plano importado?')) return;
+  salvarArquivosPlanoImportado(carregarArquivosPlanoImportado().filter(a=>a.id!==id));
+  planoCarreira();
+}
+function carregarNiveisPlanoManual(){
+  try{return JSON.parse(localStorage.getItem('niveisPlanoCarreiraManual') || '[]');}
+  catch(e){return [];}
+}
+function salvarNiveisPlanoManual(lista){localStorage.setItem('niveisPlanoCarreiraManual', JSON.stringify(lista));}
+function salvarNivelPlanoManual(){
+  if(!isAdmin()){ alert('Somente admin pode adicionar manualmente ao plano.'); return; }
+  const nivel=(document.getElementById('manualNivelPlano')?.value || '').trim();
+  const pontos=Number(document.getElementById('manualPontosPlano')?.value || 0);
+  const descricao=(document.getElementById('manualDescricaoPlano')?.value || '').trim();
+  const setor=document.getElementById('manualSetorPlano')?.value || 'Geral';
+  if(!nivel){ alert('Informe o nível ou cargo do plano.'); return; }
+  const lista=carregarNiveisPlanoManual();
+  lista.push({id:Date.now().toString(),nivel,pontos,descricao,setor});
+  salvarNiveisPlanoManual(lista);
+  alert('Item adicionado ao plano de carreira!');
+  planoCarreira();
+}
+function excluirNivelPlanoManual(id){
+  if(!isAdmin()){ alert('Somente admin pode excluir itens manuais.'); return; }
+  if(!confirm('Deseja excluir este item manual do plano?')) return;
+  salvarNiveisPlanoManual(carregarNiveisPlanoManual().filter(n=>n.id!==id));
+  planoCarreira();
+}
 function nivelCarreira(pontos){
   if(pontos>=600) return 'Ouro';
   if(pontos>=300) return 'Prata';
