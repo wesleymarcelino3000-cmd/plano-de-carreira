@@ -206,7 +206,7 @@ async function dashboard(){
   const percIndividual=totalMetasIndividuais ? Math.round((realizadoIndividual/totalMetasIndividuais)*100) : 0;
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="grid">
       <div class="card"><h3>Funcionários</h3><div class="value">${funcs?.length||0}</div></div>
       <div class="card"><h3>Pontos</h3><div class="value">${totalPontos}</div></div>
@@ -265,7 +265,7 @@ async function painelSetor(setor){
   const realizadoIndividual=(metasIndividuais||[]).reduce((s,m)=>s+(Number(m.realizado)||0),0);
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="grid">
       <div class="card"><h3>Equipe</h3><div class="value">${funcs?.length||0}</div></div>
       <div class="card"><h3>Meta</h3><div class="value">${meta}</div></div>
@@ -339,7 +339,7 @@ async function metas(){
   const {data}=await db.from('metas').select('*').order('created_at',{ascending:false});
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card">
       <h3>Criar Meta</h3>
       <select id="metaSetor">
@@ -394,7 +394,7 @@ async function metasIndividuais(){
   ]);
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card form-card">
       <h3>Criar meta individual</h3>
       <p class="muted">Escolha o setor, selecione o funcionário e defina a meta individual.</p>
@@ -527,7 +527,7 @@ async function criarUsuario(){
   document.getElementById('title').innerText='Criar Usuário';
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card form-card">
       <h3>Novo usuário</h3>
       <p class="muted">Crie o usuário com login próprio, sem depender de e-mail do Supabase.</p>
@@ -551,7 +551,7 @@ async function criarUsuario(){
       </div>
       <h3>Funções que este usuário pode acessar</h3>
       ${montarCheckboxPermissoes('novoPerm', permissoesPadrao('funcionario'))}
-      <button onclick="salvarNovoUsuario()">Criar usuário</button>
+      <button type="button" onclick="salvarNovoUsuario()">Criar usuário</button>
     </div>
   </form>
   `;
@@ -563,6 +563,7 @@ async function criarUsuario(){
     if(b) b.value='';
     if(c) c.value='';
   },100);
+  limparCamposCriarUsuario();
 }
 
 
@@ -664,7 +665,7 @@ async function editarAcessosUsuario(id){
   if(error || !u){ alert('Erro ao buscar usuário.'); return; }
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card form-card">
       <h3>Editar acessos - ${u.nome || '-'}</h3>
       <div class="form-grid">
@@ -718,7 +719,7 @@ async function salvarAcessosUsuario(id){
 function editarMeuUsuario(){
   document.getElementById('title').innerText='Editar Meu Usuário';
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card form-card">
       <h3>Meus dados</h3>
       <p class="muted">Altere seus dados. Para manter a senha atual, deixe o campo de nova senha em branco.</p>
@@ -731,7 +732,7 @@ function editarMeuUsuario(){
         <input disabled value="Nível: ${usuarioAtual.nivel || ''}">
         <input id="editNovaSenha" type="password" placeholder="Nova senha (opcional)">
       </div>
-      <button onclick="salvarMeuUsuario()">Salvar alterações</button>
+      <button type="button" onclick="salvarMeuUsuario()">Salvar alterações</button>
     </div>
   </form>
   `;
@@ -797,7 +798,7 @@ async function planoCarreira(){
   const podeEditarPlano = isAdmin();
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     ${podeEditarPlano ? `
     <div class="card import-card no-export">
       <h3>Importar Plano de Carreira</h3>
@@ -806,7 +807,7 @@ async function planoCarreira(){
         <input id="arquivoPlanoCarreira" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*,application/pdf">
         <input id="nomeArquivoPlano" placeholder="Nome para identificar o plano. Ex: Plano 2026">
       </div>
-      <button onclick="importarPlanoCarreira()">Importar plano</button>
+      <button type="button" onclick="importarPlanoCarreira()">Importar plano</button>
     </div>
 
     <div class="card form-card no-export">
@@ -820,7 +821,7 @@ async function planoCarreira(){
           <option>Geral</option><option>SAC</option><option>Logística</option><option>Vendas</option><option>Marketing</option>
         </select>
       </div>
-      <button onclick="salvarNivelPlanoManual()">Adicionar ao plano</button>
+      <button type="button" onclick="salvarNivelPlanoManual()">Adicionar ao plano</button>
     </div>` : `
     <div class="card no-export">
       <h3>Plano de Carreira</h3>
@@ -1110,7 +1111,7 @@ async function paginaFuncionariosAdmin(){
   document.getElementById('title').innerText='Editar Funcionários';
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card">
       <h3>Editar funcionários</h3>
       <p class="muted">Edite ou exclua funcionários cadastrados.</p>
@@ -1171,7 +1172,7 @@ async function editarFuncionarioAdmin(id){
   document.getElementById('title').innerText='Editar Funcionário';
 
   document.getElementById('page').innerHTML=`
-    <form autocomplete="off">
+    <form autocomplete="off" onsubmit="return false;">
     <div class="card form-card edit-func-card">
       <h3>Editar funcionário</h3>
       <div class="form-grid">
@@ -1182,7 +1183,7 @@ async function editarFuncionarioAdmin(id){
         <input id="funcEditPontos" type="number" placeholder="Pontos" value="${Number(f.pontos || 0)}">
       </div>
 
-      <button onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
+      <button type="button" onclick="salvarFuncionarioAdmin('${f.id}')">Salvar funcionário</button>
       <button class="secondary-btn" onclick="paginaFuncionariosAdmin()">Voltar</button>
     </div>
   </form>
@@ -1242,4 +1243,13 @@ async function excluirFuncionarioAdmin(id){
 
   alert('Funcionário excluído!');
   carregarFuncionariosAdmin();
+}
+
+function limparCamposCriarUsuario(){
+  setTimeout(()=>{
+    ['novoNome','novoUsuario','novoEmail','novaSenha'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.value='';
+    });
+  },150);
 }
